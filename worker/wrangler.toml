@@ -7,3 +7,7 @@ workers_dev = true
 FIREBASE_PROJECT_ID = "sarpanch-social-connect"
 META_GRAPH_VERSION = "v23.0"
 ALLOWED_ORIGINS = "https://amzy.github.io"
+
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "sarpanch-social-connect-media"
