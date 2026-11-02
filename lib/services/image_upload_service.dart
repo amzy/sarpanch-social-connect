@@ -36,9 +36,18 @@ class ImageUploadService {
   }
 
   String _key(String uid, String path) {
-    final normalized = path.replaceAll('\\', '/').split('/').where((p) => p.isNotEmpty).toList();
-    final relative = normalized.length >= 3 ? normalized.skip(1).join('/') : normalized.join('/');
-    return '$uid/$relative';
+    final normalized = path
+        .replaceAll('\\\\', '/')
+        .split('/')
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (normalized.isNotEmpty && normalized.first == 'users') {
+      normalized.removeAt(0);
+    }
+    if (normalized.isNotEmpty && normalized.first == uid) {
+      normalized.removeAt(0);
+    }
+    return '$uid/${normalized.join('/')}';
   }
 
   String _contentType(String name) {
