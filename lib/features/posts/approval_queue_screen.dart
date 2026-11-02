@@ -159,16 +159,14 @@ class _ApprovalCardState extends State<_ApprovalCard> {
               const SizedBox(height: 8),
               RadioGroup<int>(
                 groupValue: _selectedCaption,
-                onChanged: _busy
-                    ? null
-                    : (value) {
-                        if (value == null) return;
-                        final captions = data['aiCaptions'] as List;
-                        setState(() {
-                          _selectedCaption = value;
-                          _caption.text = captions[value].toString();
-                        });
-                      },
+                onChanged: (value) {
+                  if (_busy || value == null) return;
+                  final captions = data['aiCaptions'] as List;
+                  setState(() {
+                    _selectedCaption = value;
+                    _caption.text = captions[value].toString();
+                  });
+                },
                 child: Column(
                   children: (data['aiCaptions'] as List)
                       .asMap()
