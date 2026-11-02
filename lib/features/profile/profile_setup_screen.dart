@@ -86,7 +86,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     });
     try {
       final hindi = await BackendApiService().transliterateName(source);
-      if (hindi == null || hindi.trim().isEmpty) {
+      if (hindi.trim().isEmpty) {
         throw Exception(
             'No Hindi suggestion was returned. Please enter the spelling manually.');
       }
