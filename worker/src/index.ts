@@ -459,6 +459,35 @@ async function handle(request: Request, env: Env): Promise<Response> {
       await patchDoc(env, path, { whatsappDelivery: delivery }, post.updateTime);
       return response({ saved: true, destination, status: "confirmed_by_admin" }, 200, origin);
     }
+    if (url.pathname === "/api/social/setup/read") {
+      const setupPath = "users/" + user.uid + "/private/socialSetup";
+      const setup = await getDoc(env, setupPath).catch(error => { if ((error as any)?.status === 404) return null; throw error; });
+      return response({ profiles: setup?.data.profiles ?? {} }, 200, origin);
+    }
+    if (url.pathname === "/api/social/setup") {
+      const profiles = body.profiles;
+      if (!profiles || typeof profiles !== "object" || Array.isArray(profiles)) fail("Social profiles are required.");
+      const platforms = ["facebook", "instagram", "whatsappBusiness", "whatsappChannel", "youtube", "x"];
+      const statuses = ["not_started", "created", "connected", "manual_only"];
+      const normalized: Json = {};
+      for (const platform of platforms) {
+        const item = (profiles as Json)[platform];
+        if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+        const profile = item as Json;
+        const handle = String(profile.handle ?? "").trim();
+        const profileUrl = String(profile.profileUrl ?? "").trim();
+        const status = String(profile.status ?? "not_started");
+        if (handle.length > 100 || profileUrl.length > 500) fail("Account handle or profile URL is too long.");
+        if (profileUrl && !/^https:\/\//i.test(profileUrl)) fail("Profile URLs must use HTTPS.");
+        if (!statuses.includes(status)) fail("Invalid social account status.");
+        normalized[platform] = { handle, profileUrl, status };
+      }
+      const path = "users/" + user.uid + "/private/socialSetup";
+      const old = await getDoc(env, path).catch(error => { if ((error as any)?.status === 404) return null; throw error; });
+      const fields: Json = { profiles: normalized, updatedAt: { __timestamp: new Date().toISOString() } };
+      if (old) await patchDoc(env, path, fields, old.updateTime); else await createDoc(env, path, fields);
+      return response({ saved: true, profiles: normalized }, 200, origin);
+    }
     if (url.pathname === "/api/social/credentials") {
       const allowed = ["facebookPageToken", "facebookPageId", "instagramId", "twitterToken"];
       if (Object.keys(body).some(key => !allowed.includes(key))) fail("Unsupported credential field.");
