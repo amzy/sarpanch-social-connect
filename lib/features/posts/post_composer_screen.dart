@@ -40,13 +40,17 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   void initState() {
     super.initState();
     final configured = widget.profile['primaryLanguage'] as String?;
-    _contentLanguage = supportedContentLanguages.contains(configured)
-        ? configured!
-        : 'Hindi';
+    _contentLanguage =
+        supportedContentLanguages.contains(configured) ? configured! : 'Hindi';
   }
 
   static const supportedContentLanguages = [
-    'English', 'Hindi', 'Marathi', 'Telugu', 'Tamil', 'Gujarati',
+    'English',
+    'Hindi',
+    'Marathi',
+    'Telugu',
+    'Tamil',
+    'Gujarati',
   ];
 
   @override
@@ -218,7 +222,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
           const SizedBox(height: 14),
           DropdownButtonFormField<String>(
             initialValue: _contentLanguage,
-            decoration: const InputDecoration(labelText: 'Post content language'),
+            decoration:
+                const InputDecoration(labelText: 'Post content language'),
             items: supportedContentLanguages
                 .map((language) => DropdownMenuItem(
                       value: language,
