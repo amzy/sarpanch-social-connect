@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:transliteration/transliteration.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/image_upload_service.dart';
@@ -38,6 +39,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   XFile? _sealImage;
   String _language = 'Hindi';
   bool _saving = false;
+  bool _transliteratingSarpanch = false;
+  bool _transliteratingPanchayat = false;
   String? _error;
 
   @override
@@ -69,6 +72,46 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
   Future<XFile?> _pick() =>
       _picker.pickImage(source: ImageSource.gallery, imageQuality: 90);
+
+  Future<void> _convertToHindi({required bool sarpanch}) async {
+    final source = sarpanch ? _sarpanch.text.trim() : _panchayat.text.trim();
+    if (source.isEmpty) return;
+    setState(() {
+      if (sarpanch) {
+        _transliteratingSarpanch = true;
+      } else {
+        _transliteratingPanchayat = true;
+      }
+      _error = null;
+    });
+    try {
+      final result = await Transliteration.transliterate(source, Languages.HINDI);
+      final suggestions = result?.transliterationSuggestions ?? const <String>[];
+      if (suggestions.isEmpty) {
+        throw Exception('No Hindi suggestion was returned. Please enter the Hindi spelling manually.');
+      }
+      if (!mounted) return;
+      setState(() {
+        if (sarpanch) {
+          _sarpanchHindi.text = suggestions.first;
+        } else {
+          _panchayatHindi.text = suggestions.first;
+        }
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Hindi conversion failed: $error');
+    } finally {
+      if (mounted) {
+        setState(() {
+          if (sarpanch) {
+            _transliteratingSarpanch = false;
+          } else {
+            _transliteratingPanchayat = false;
+          }
+        });
+      }
+    }
+  }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
@@ -165,18 +208,36 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _sarpanchHindi,
-                textDirection: TextDirection.rtl,
-                decoration: const InputDecoration(
-                    labelText: 'Sarpanch name (Hindi)',
-                    hintText: 'उदाहरण: उमर फारुख'),
+                textDirection: TextDirection.ltr,
+                textAlign: TextAlign.left,
+                decoration: InputDecoration(
+                  labelText: 'Sarpanch name (Hindi)',
+                  hintText: 'उदाहरण: उमर फारुख',
+                  suffixIcon: IconButton(
+                    tooltip: 'Convert English name to Hindi',
+                    onPressed: _transliteratingSarpanch ? null : () => _convertToHindi(sarpanch: true),
+                    icon: _transliteratingSarpanch
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.translate),
+                  ),
+                ),
               ),
               const SizedBox(height: 14),
               TextFormField(
                 controller: _panchayatHindi,
-                textDirection: TextDirection.rtl,
-                decoration: const InputDecoration(
-                    labelText: 'Gram Panchayat name (Hindi)',
-                    hintText: 'उदाहरण: गगवाना'),
+                textDirection: TextDirection.ltr,
+                textAlign: TextAlign.left,
+                decoration: InputDecoration(
+                  labelText: 'Gram Panchayat name (Hindi)',
+                  hintText: 'उदाहरण: गगवाना',
+                  suffixIcon: IconButton(
+                    tooltip: 'Convert English name to Hindi',
+                    onPressed: _transliteratingPanchayat ? null : () => _convertToHindi(sarpanch: false),
+                    icon: _transliteratingPanchayat
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.translate),
+                  ),
+                ),
               ),
               const SizedBox(height: 14),
               TextFormField(
