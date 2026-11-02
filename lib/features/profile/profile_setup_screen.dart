@@ -92,7 +92,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         const SizedBox(height: 14),
         TextFormField(controller: _state, decoration: InputDecoration(labelText: strings.state), validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null),
         const SizedBox(height: 14),
-        DropdownButtonFormField<String>(value: _language, decoration: InputDecoration(labelText: strings.language), items: supportedLanguages.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(), onChanged: (value) => setState(() => _language = value ?? 'Hindi')),
+        DropdownButtonFormField<String>(initialValue: _language, decoration: InputDecoration(labelText: strings.language), items: supportedLanguages.map((value) => DropdownMenuItem(value: value, child: Text(value))).toList(), onChanged: (value) => setState(() => _language = value ?? 'Hindi')),
         const SizedBox(height: 18),
         _imagePicker('Profile picture', _profileImage, () async { final file = await _pick(); if (file != null) setState(() => _profileImage = file); }),
         const SizedBox(height: 10),
