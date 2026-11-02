@@ -191,6 +191,7 @@ export const retryFailedPost = onCall({ region: FUNCTION_REGION }, async (reques
     postId: nextPostId,
     uid: request.auth.uid,
     type: String(previous.type ?? 'development'),
+    contentLanguage: String(previous.contentLanguage ?? 'Hindi'),
     creationTimestamp: FieldValue.serverTimestamp(),
     rawNotes: String(previous.rawNotes ?? ''),
     beforeImageUrl: String(previous.beforeImageUrl ?? ''),
