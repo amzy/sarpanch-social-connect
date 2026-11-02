@@ -181,6 +181,43 @@ export const dispatchApprovedPost = onDocumentUpdated({
 
 export const saveSocialCredentials = saveSocialCredentialsHandler;
 
+export const generateMorePostCaptions = onCall({ region: FUNCTION_REGION, secrets: [GEMINI_API_KEY] }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.');
+  const postId = String(request.data?.postId ?? '');
+  if (!postId) throw new HttpsError('invalid-argument', 'postId is required.');
+  const postRef = db.doc('posts_queue/' + postId);
+  const postSnapshot = await postRef.get();
+  const post = postSnapshot.data();
+  if (!post || post.uid !== request.auth.uid) throw new HttpsError('not-found', 'Post not found.');
+  if (post.status !== 'pending_approval') throw new HttpsError('failed-precondition', 'Post is not awaiting approval.');
+  const refreshCount = Number(post.captionRefreshCount ?? 0);
+  if (refreshCount >= 5) throw new HttpsError('resource-exhausted', 'Maximum of five refreshes reached.');
+  const userSnapshot = await db.doc('users/' + request.auth.uid).get();
+  const user = userSnapshot.data() ?? {};
+  const language = String(post.contentLanguage ?? user.primaryLanguage ?? 'Hindi');
+  if (!languages.has(language)) throw new HttpsError('invalid-argument', 'Unsupported language.');
+  const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY.value() });
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: [
+      'Create exactly three distinct, factual Gram Panchayat social media caption options.',
+      'Language: ' + language + '. Post type: ' + String(post.type ?? 'general') + '.',
+      'User prompt: ' + String(post.rawNotes ?? '') + '.',
+      'Sarpanch: ' + String(user.sarpanchNameHindi || user.sarpanchName || '') + '. Panchayat: ' + String(user.panchayatNameHindi || user.panchayatName || '') + '.',
+      'Do not invent facts, names, dates, budgets, statistics or promises.',
+      'Return JSON only with shape {"captions":["one","two","three"]}.',
+    ].join('\n'),
+    config: { temperature: 0.7, maxOutputTokens: 700 },
+  });
+  const raw = response.text?.trim() ?? '';
+  const parsed = JSON.parse(raw) as { captions?: unknown };
+  const captions = Array.isArray(parsed.captions) ? parsed.captions.map(String).filter((value) => value.trim()).slice(0, 3) : [];
+  if (captions.length !== 3) throw new HttpsError('internal', 'AI did not return three options.');
+  await postRef.update({ aiCaptions: captions, aiCaption: captions[0], captionRefreshCount: FieldValue.increment(1), aiGeneratedAt: FieldValue.serverTimestamp() });
+  return { captions, refreshCount: refreshCount + 1 };
+});
+
+
 export const retryFailedPost = onCall({ region: FUNCTION_REGION }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.');
   const postId = String((request.data as { postId?: unknown }).postId ?? '');
