@@ -33,7 +33,7 @@ service cloud.firestore {
     function validUserKeys(data) {
       return data.keys().hasOnly([
         'uid', 'email', 'username', 'mobileNumber', 'profileComplete',
-        'sarpanchName', 'panchayatName', 'district', 'state',
+        'sarpanchName', 'panchayatName', 'sarpanchNameHindi', 'panchayatNameHindi', 'district', 'state',
         'primaryLanguage', 'imageUrl', 'sealUrl', 'createdAt',
         'plan', 'billingStatus'
       ]);
@@ -69,7 +69,7 @@ service cloud.firestore {
         && validUserKeys(request.resource.data)
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'sarpanchName', 'panchayatName', 'district', 'state',
+          'sarpanchName', 'panchayatName', 'sarpanchNameHindi', 'panchayatNameHindi', 'district', 'state',
           'primaryLanguage', 'imageUrl', 'sealUrl', 'profileComplete'
         ])
         && request.resource.data.profileComplete == true
