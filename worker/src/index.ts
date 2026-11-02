@@ -351,7 +351,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
   if (url.pathname === "/health" && request.method === "GET") return response({ ok: true, service: "sarpanch-social-connect-api" }, 200, origin);
   if (url.pathname.startsWith("/media/") && request.method === "GET") {
     const key = decodeURIComponent(url.pathname.slice("/media/".length));
-    if (!/^[A-Za-z0-9_-]{1,128}\\/[A-Za-z0-9_.-]{1,160}$/.test(key)) return new Response("Not found", { status: 404 });
+    if (!/^[A-Za-z0-9_-]{1,128}\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_.-]{1,160}$/.test(key)) return new Response("Not found", { status: 404 });
     const object = await env.MEDIA_BUCKET.get(key);
     if (!object?.body) return new Response("Not found", { status: 404 });
     return new Response(object.body, { headers: {
@@ -369,13 +369,13 @@ async function handle(request: Request, env: Env): Promise<Response> {
       const key = String(body.path ?? "");
       const contentType = String(body.contentType ?? "");
       const encoded = String(body.data ?? "");
-      if (!/^[A-Za-z0-9_-]{1,128}\\/[A-Za-z0-9_.-]{1,160}$/.test(key) || !key.startsWith(user.uid + "/")) fail("Invalid media path.", 400);
+      if (!/^[A-Za-z0-9_-]{1,128}\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_.-]{1,160}$/.test(key) || !key.startsWith(user.uid + "/")) fail("Invalid media path.", 400);
       if (!["image/jpeg", "image/png", "image/webp"].includes(contentType)) fail("Unsupported image format.", 400);
       if (!encoded || encoded.length > 11_200_000) fail("Image must be smaller than 8 MB.", 413);
       const binary = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
       if (binary.byteLength > 8 * 1024 * 1024) fail("Image must be smaller than 8 MB.", 413);
       await env.MEDIA_BUCKET.put(key, arrayBuffer(binary), { httpMetadata: { contentType, cacheControl: "public, max-age=31536000, immutable" } });
-      return response({ url: new URL("/media/" + encodeURIComponent(key).replace("%2F", "/"), request.url).toString(), size: binary.byteLength }, 201, origin);
+      return response({ url: new URL("/media/" + key.split("/").map(encodeURIComponent).join("/"), request.url).toString(), size: binary.byteLength }, 201, origin);
     }
     const body = await request.json() as Json;
     if (url.pathname === "/api/posts/generate") {
