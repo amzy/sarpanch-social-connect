@@ -44,7 +44,19 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                   ),
                   child: selected
                       ? const Icon(Icons.check, color: Colors.white)
-                      : null,
+                      : themeId == AppThemeId.indiaTricolor
+                          ? const Align(
+                              alignment: Alignment.bottomCenter,
+                              child: SizedBox(
+                                height: 10,
+                                child: Row(children: [
+                                  Expanded(child: ColoredBox(color: Color(0xFFFF9933))),
+                                  Expanded(child: ColoredBox(color: Colors.white)),
+                                  Expanded(child: ColoredBox(color: Color(0xFF138808))),
+                                ]),
+                              ),
+                            )
+                          : null,
                 ),
                 title: Text(themeId.label),
                 subtitle: Text(themeId.description),
