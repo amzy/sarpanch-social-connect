@@ -58,11 +58,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         'primaryLanguage': _language,
         'imageUrl': imageUrl,
         'sealUrl': sealUrl,
-        'plan': 'free',
         'profileComplete': true,
       });
     } catch (error) {
-      setState(() => _error = error.toString());
+      if (mounted) setState(() => _error = error.toString());
     } finally {
       if (mounted) setState(() => _saving = false);
     }
