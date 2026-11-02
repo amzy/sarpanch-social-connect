@@ -45,7 +45,7 @@ async function googleAccessToken(env: Env): Promise<string> {
   const unsigned = header + "." + claim;
   const key = await crypto.subtle.importKey("pkcs8", pemBytes(account.private_key),
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
-  const signature = new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, encoder.encode(unsigned)));
+  const signature = new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, arrayBuffer(encoder.encode(unsigned))));
   const assertion = unsigned + "." + b64url(signature);
   const tokenResponse = await fetch(account.token_uri ?? "https://oauth2.googleapis.com/token", {
     method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -218,16 +218,16 @@ function toB64(value: ArrayBuffer): string {
   const bytes = new Uint8Array(value); let binary = ""; bytes.forEach(b => binary += String.fromCharCode(b)); return btoa(binary);
 }
 async function cryptoKey(env: Env): Promise<CryptoKey> {
-  return crypto.subtle.importKey("raw", fromB64(env.SOCIAL_ENCRYPTION_KEY), "AES-GCM", false, ["encrypt", "decrypt"]);
+  return crypto.subtle.importKey("raw", arrayBuffer(fromB64(env.SOCIAL_ENCRYPTION_KEY)), "AES-GCM", false, ["encrypt", "decrypt"]);
 }
 async function encryptSecret(env: Env, value: string): Promise<string> {
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await cryptoKey(env), encoder.encode(value));
-  return `${toB64(iv.buffer)}.${toB64(encrypted)}`;
+  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv: arrayBuffer(iv) }, await cryptoKey(env), arrayBuffer(encoder.encode(value)));
+  return `${toB64(arrayBuffer(iv))}.${toB64(encrypted)}`;
 }
 async function decryptSecret(env: Env, value: string): Promise<string> {
   const [iv, encrypted] = value.split(".");
-  const clear = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromB64(iv) }, await cryptoKey(env), fromB64(encrypted));
+  const clear = await crypto.subtle.decrypt({ name: "AES-GCM", iv: arrayBuffer(fromB64(iv)) }, await cryptoKey(env), arrayBuffer(fromB64(encrypted)));
   return new TextDecoder().decode(clear);
 }
 async function readSocial(env: Env, uid: string): Promise<Json> {
