@@ -21,10 +21,12 @@ jobs:
 
       - run: flutter pub get
 
-      # Keep main formatted automatically. Pull requests remain a strict format gate.
-      - name: Format Dart files on main
+      # Apply safe Dart lint fixes and formatting on main before analysis.
+      # Pull requests remain a strict format gate.
+      - name: Fix and format Dart files on main
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
+          dart fix --apply
           dart format lib
           if ! git diff --quiet -- lib; then
             git config user.name "github-actions[bot]"
