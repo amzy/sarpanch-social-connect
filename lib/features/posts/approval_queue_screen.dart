@@ -94,7 +94,6 @@ class _ApprovalCardState extends State<_ApprovalCard> {
       _error = null;
     });
     try {
-      final repository = PostRepository();
       if (status == 'rejected') {
         await BackendApiService().rejectPost(widget.post.id);
       } else {
