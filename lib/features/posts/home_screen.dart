@@ -6,6 +6,7 @@ import '../profile/profile_setup_screen.dart';
 import 'approval_queue_screen.dart';
 import 'post_composer_screen.dart';
 import '../profile/data/profile_repository.dart';
+import '../settings/appearance_settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -17,7 +18,7 @@ class HomeScreen extends StatelessWidget {
       stream: ProfileRepository().watchProfile(uid),
       builder: (context, snapshot) {
         if (!snapshot.hasData) return const Scaffold(body: Center(child: CircularProgressIndicator()));
-        if (!snapshot.data!.exists) return const ProfileSetupScreen();
+        if (!snapshot.data!.exists || snapshot.data!.data()?['profileComplete'] != true) return const ProfileSetupScreen();
         final profile = snapshot.data!.data()!;
         return _HomeContent(profile: profile);
       },
@@ -42,14 +43,20 @@ class _HomeContentState extends State<_HomeContent> {
     return Scaffold(
       appBar: AppBar(
         title: Text(strings.appTitle),
-        actions: [IconButton(tooltip: strings.signOut, onPressed: () => FirebaseAuth.instance.signOut(), icon: const Icon(Icons.logout))],
+        actions: [
+          IconButton(
+            tooltip: 'Appearance and themes',
+            icon: const Icon(Icons.palette_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AppearanceSettingsScreen())),
+          ),
+          IconButton(tooltip: strings.signOut, onPressed: () => FirebaseAuth.instance.signOut(), icon: const Icon(Icons.logout))],
       ),
       body: _index == 0 ? _Dashboard(profile: widget.profile, onCompose: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PostComposerScreen(profile: widget.profile)))) : const ApprovalQueueScreen(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),
         destinations: [
-          NavigationDestination(icon: const Icon(Icons.dashboard_outlined), selectedIcon: const Icon(Icons.dashboard), label: 'Home'),
+          const NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
           NavigationDestination(icon: const Icon(Icons.fact_check_outlined), selectedIcon: const Icon(Icons.fact_check), label: strings.approvalQueue),
         ],
       ),
@@ -66,12 +73,13 @@ class _Dashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context)!;
-    final name = String(profile['sarpanchName'] ?? '');
-    final panchayat = String(profile['panchayatName'] ?? '');
-    final language = String(profile['primaryLanguage'] ?? 'Hindi');
+    final name = (profile['sarpanchName'] as String?) ?? '';
+    final panchayat = (profile['panchayatName'] as String?) ?? '';
+    final language = (profile['primaryLanguage'] as String?) ?? 'Hindi';
+    final imageUrl = (profile['imageUrl'] as String?) ?? '';
     return ListView(padding: const EdgeInsets.all(20), children: [
       Card(child: Padding(padding: const EdgeInsets.all(20), child: Row(children: [
-        CircleAvatar(radius: 32, foregroundImage: String(profile['imageUrl'] ?? '').isNotEmpty ? NetworkImage(String(profile['imageUrl'])) : null, child: String(profile['imageUrl'] ?? '').isEmpty ? const Icon(Icons.person, size: 30) : null),
+        CircleAvatar(radius: 32, foregroundImage: imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null, child: imageUrl.isEmpty ? const Icon(Icons.person, size: 30) : null),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), Text(panchayat), Text(language, style: Theme.of(context).textTheme.bodySmall)])),
       ]))),
@@ -80,8 +88,8 @@ class _Dashboard extends StatelessWidget {
       const SizedBox(height: 10),
       FilledButton.icon(onPressed: onCompose, icon: const Icon(Icons.auto_awesome), label: Text(strings.createPost), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56))),
       const SizedBox(height: 20),
-      Card(child: ListTile(leading: const Icon(Icons.verified_user_outlined), title: const Text('Approval before publishing'), subtitle: const Text('AI drafts are never published automatically. Review and edit every caption before dispatch.'))),
-      Card(child: ListTile(leading: const Icon(Icons.wifi_off_outlined), title: const Text('Offline-friendly'), subtitle: const Text('Images are compressed on your phone. Failed submissions are retained in a local retry queue.'))),
+      const Card(child: ListTile(leading: Icon(Icons.verified_user_outlined), title: Text('Approval before publishing'), subtitle: Text('AI drafts are never published automatically. Review and edit every caption before dispatch.'))),
+      const Card(child: ListTile(leading: Icon(Icons.wifi_off_outlined), title: Text('Offline-friendly'), subtitle: Text('Images are compressed on your phone. Failed submissions are retained in a local retry queue.'))),
     ]);
   }
 }

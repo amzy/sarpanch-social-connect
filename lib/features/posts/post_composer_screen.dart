@@ -44,18 +44,25 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         ListTile(leading: const Icon(Icons.photo_library_outlined), title: const Text('Choose from gallery'), onTap: () => Navigator.pop(context, ImageSource.gallery)),
       ])),
     );
-    if (source == null) return;
+    if (source == null || !mounted) return;
     final file = await _picker.pickImage(source: source, imageQuality: 90);
-    if (file == null) return;
+    if (file == null || !mounted) return;
     final compressed = await _uploads.compress(file);
     setState(() { if (before) { _before = File(compressed.path); } else { _after = File(compressed.path); } });
   }
 
   Future<Uint8List> _captureCanvas() async {
-    final profileUrl = String(widget.profile['imageUrl'] ?? '');
-    final sealUrl = String(widget.profile['sealUrl'] ?? '');
-    if (profileUrl.isNotEmpty) await precacheImage(NetworkImage(profileUrl), context);
-    if (sealUrl.isNotEmpty) await precacheImage(NetworkImage(sealUrl), context);
+    if (!mounted) throw Exception('The post editor was closed before preview capture.');
+    final profileUrl = (widget.profile['imageUrl'] as String?) ?? '';
+    final sealUrl = (widget.profile['sealUrl'] as String?) ?? '';
+    if (profileUrl.isNotEmpty) {
+      await precacheImage(NetworkImage(profileUrl), context);
+      if (!mounted) throw Exception('The post editor was closed before preview capture.');
+    }
+    if (sealUrl.isNotEmpty) {
+      await precacheImage(NetworkImage(sealUrl), context);
+      if (!mounted) throw Exception('The post editor was closed before preview capture.');
+    }
     await WidgetsBinding.instance.endOfFrame;
     final boundary = _canvasKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
     if (boundary == null) throw Exception('Unable to capture the post canvas.');
@@ -130,10 +137,10 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         ClipRect(child: FittedBox(fit: BoxFit.contain, child: RepaintBoundary(key: _canvasKey, child: BeforeAfterCanvas(
           beforeFile: _before,
           afterFile: _after,
-          sarpanchName: String(widget.profile['sarpanchName'] ?? ''),
-          panchayatName: String(widget.profile['panchayatName'] ?? ''),
-          profileImageUrl: String(widget.profile['imageUrl'] ?? ''),
-          sealUrl: String(widget.profile['sealUrl'] ?? ''),
+          sarpanchName: (widget.profile['sarpanchName'] as String?) ?? '',
+          panchayatName: (widget.profile['panchayatName'] as String?) ?? '',
+          profileImageUrl: (widget.profile['imageUrl'] as String?) ?? '',
+          sealUrl: (widget.profile['sealUrl'] as String?) ?? '',
           notes: _notes.text,
           stacked: _stacked,
         )))),

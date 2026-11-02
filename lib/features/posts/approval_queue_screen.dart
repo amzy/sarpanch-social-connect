@@ -46,7 +46,7 @@ class _ApprovalCardState extends State<_ApprovalCard> {
   @override
   void initState() {
     super.initState();
-    _caption = TextEditingController(text: String(widget.post.data()['aiCaption'] ?? ''));
+    _caption = TextEditingController(text: (widget.post.data()['aiCaption'] as String?) ?? '');
   }
 
   @override
@@ -72,7 +72,7 @@ class _ApprovalCardState extends State<_ApprovalCard> {
     final data = widget.post.data();
     try {
       await LocalShareService().sharePost(
-        imageUrl: String(data['finalCompositedImage'] ?? ''),
+        imageUrl: (data['finalCompositedImage'] as String?) ?? '',
         caption: _caption.text.trim(),
       );
     } catch (error) {
@@ -84,7 +84,7 @@ class _ApprovalCardState extends State<_ApprovalCard> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context)!;
     final data = widget.post.data();
-    final imageUrl = String(data['finalCompositedImage'] ?? '');
+    final imageUrl = (data['finalCompositedImage'] as String?) ?? '';
     return Card(
       margin: const EdgeInsets.only(bottom: 18),
       clipBehavior: Clip.antiAlias,

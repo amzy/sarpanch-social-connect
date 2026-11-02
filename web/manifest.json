@@ -1,0 +1,9 @@
+{
+  "name": "Sarpanch Social Connect",
+  "short_name": "Sarpanch Connect",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#101820",
+  "theme_color": "#101820",
+  "description": "AI-assisted social publishing and citizen engagement for Gram Panchayats."
+}

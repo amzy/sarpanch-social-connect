@@ -85,3 +85,21 @@ The client must not write access tokens to `users/{uid}`. After a provider OAuth
 ## Validation status
 
 This is a generated project scaffold. It has not been connected to a real Firebase project, provider OAuth apps, billing provider, or KMS key. Run the setup and verification commands above before deployment. Never commit Firebase service-account keys, provider tokens, or generated Firebase configuration containing environment-specific credentials.
+
+
+## Current development baseline
+
+The active implementation branch is `feature/foundation-design-system`.
+
+### Foundation work started
+- Centralized six-color theme palette: Government Blue, Gram Green, Saffron Orange, Royal Purple, Teal Cyan and Crimson Red.
+- Light, dark and follow-system appearance modes.
+- Persisted appearance preferences.
+- English-only app interface, with post content language kept as a separate profile/post setting.
+- Appearance settings screen linked from the signed-in app bar.
+- Design-system and phased development documentation.
+
+See [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) and [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md).
+
+### Development status
+This is the first foundation milestone, not a production release. Firebase project configuration, Flutter platform generation, device testing and automated test execution are still required before deployment.
