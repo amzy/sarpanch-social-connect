@@ -139,7 +139,7 @@ export const dispatchApprovedPost = onDocumentUpdated({
     const results: PublishResult = {};
     const attempts: Promise<void>[] = [];
 
-    if (credentials.facebookPageToken && credentials.facebookPageId && imageUrl) {
+    if (credentials.facebookPageToken && credentials.facebookPageId) {
       attempts.push(publishFacebook(caption, imageUrl, credentials.facebookPageId, credentials.facebookPageToken)
         .then((value) => { results.facebook = { ok: true, id: value.id }; })
         .catch((error: unknown) => { results.facebook = { ok: false, error: String(error).slice(0, 500) }; }));
