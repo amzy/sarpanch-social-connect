@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+import '../../services/backend_api_service.dart';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -73,12 +73,7 @@ class _ApprovalCardState extends State<_ApprovalCard> {
       _error = null;
     });
     try {
-      final result = await FirebaseFunctions.instanceFor(region: 'asia-south1')
-          .httpsCallable('generateMorePostCaptions')
-          .call({'postId': widget.post.id});
-      final data = Map<String, dynamic>.from(result.data as Map);
-      final captions =
-          (data['captions'] as List).map((value) => value.toString()).toList();
+      final captions = await BackendApiService().moreCaptionOptions(widget.post.id);
       if (!mounted || captions.isEmpty) return;
       setState(() {
         _selectedCaption = 0;
@@ -101,9 +96,12 @@ class _ApprovalCardState extends State<_ApprovalCard> {
     try {
       final repository = PostRepository();
       if (status == 'rejected') {
-        await repository.reject(widget.post.id);
+        await BackendApiService().rejectPost(widget.post.id);
       } else {
-        await repository.approve(widget.post.id, _caption.text.trim());
+        await BackendApiService().approveAndPublish(
+          postId: widget.post.id,
+          caption: _caption.text.trim(),
+        );
       }
     } catch (error) {
       setState(() => _error = error.toString());
