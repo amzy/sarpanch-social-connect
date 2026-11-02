@@ -1,0 +1,8 @@
+name = "sarpanch-social-connect-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[vars]
+FIREBASE_PROJECT_ID = "sarpanch-social-connect"
+META_GRAPH_VERSION = "v23.0"
