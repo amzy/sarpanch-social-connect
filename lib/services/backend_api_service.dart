@@ -70,6 +70,17 @@ class BackendApiService {
         .toList();
   }
 
+  Future<String> suggestPostFrame({
+    required String postType,
+    required String notes,
+  }) async {
+    final data = await _post('/api/posts/suggest-frame', {
+      'postType': postType,
+      'notes': notes,
+    });
+    return data['frameStyle']?.toString() ?? 'classic';
+  }
+
   Future<String> transliterateName(String text) async {
     final data = await _post('/api/profile/transliterate', {'text': text});
     return data['hindi']?.toString() ?? '';

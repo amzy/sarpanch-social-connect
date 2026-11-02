@@ -7,6 +7,7 @@ enum AppThemeId {
   royalPurple,
   tealCyan,
   crimsonRed,
+  indiaTricolor,
 }
 
 extension AppThemeIdLabel on AppThemeId {
@@ -17,6 +18,7 @@ extension AppThemeIdLabel on AppThemeId {
         AppThemeId.royalPurple => 'Royal Purple',
         AppThemeId.tealCyan => 'Teal Cyan',
         AppThemeId.crimsonRed => 'Crimson Red',
+        AppThemeId.indiaTricolor => 'India Tricolour',
       };
 
   String get description => switch (this) {
@@ -26,6 +28,7 @@ extension AppThemeIdLabel on AppThemeId {
         AppThemeId.royalPurple => 'Modern and creative',
         AppThemeId.tealCyan => 'Digital and inclusive',
         AppThemeId.crimsonRed => 'Leadership and impact',
+        AppThemeId.indiaTricolor => 'Saffron, white and green national palette',
       };
 }
 
@@ -71,6 +74,11 @@ const brandPalettes = <AppThemeId, BrandPalette>{
     seed: Color(0xFFC62838),
     secondary: Color(0xFF8F1728),
     tertiary: Color(0xFFFF8A8A),
+  ),
+  AppThemeId.indiaTricolor: BrandPalette(
+    seed: Color(0xFFFF9933),
+    secondary: Color(0xFF138808),
+    tertiary: Color(0xFF000080),
   ),
 };
 

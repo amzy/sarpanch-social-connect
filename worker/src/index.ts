@@ -354,6 +354,26 @@ async function handle(request: Request, env: Env): Promise<Response> {
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(postId)) fail("A valid postId is required.");
       return response(await generateForPost(env, user.uid, postId, true), 200, origin);
     }
+    if (url.pathname === "/api/posts/suggest-frame") {
+      const postType = String(body.postType ?? "");
+      const notes = String(body.notes ?? "").trim();
+      if (!POST_TYPES.has(postType)) fail("Choose a valid post type.");
+      if (!notes || notes.length > 5000) fail("Post details must be between 1 and 5000 characters.");
+      const prompt = [
+        "You are a visual art director creating a dignified public-service poster frame for an Indian Gram Panchayat.",
+        "Choose the best matching frame design from this exact list only: classic, celebration, development, announcement, minimal, tricolor.",
+        "Match the visual mood to the post content and type. Keep it readable, respectful, non-partisan and suitable for a government community update.",
+        "Do not invent text, names, symbols, claims or achievements. Return valid JSON only with one field: frameStyle.",
+        "Post type: " + postType,
+        "Post details: " + notes,
+      ].join("\n");
+      const suggestion = jsonFromModel(await gemini(env, prompt, 0.2, 100)) as { frameStyle?: unknown };
+      const frameStyle = String(suggestion.frameStyle ?? "");
+      if (!["classic", "celebration", "development", "announcement", "minimal", "tricolor"].includes(frameStyle)) {
+        fail("AI returned an unsupported frame style.", 502);
+      }
+      return response({ frameStyle }, 200, origin);
+    }
     if (url.pathname === "/api/profile/transliterate") {
       const text = String(body.text ?? "").trim();
       if (!text || text.length > 120) fail("Enter a name up to 120 characters.");
