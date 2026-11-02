@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:transliteration/transliteration.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/image_upload_service.dart';
@@ -85,17 +85,19 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       _error = null;
     });
     try {
-      final result = await Transliteration.transliterate(source, Languages.HINDI);
-      final suggestions = result?.transliterationSuggestions ?? const <String>[];
-      if (suggestions.isEmpty) {
-        throw Exception('No Hindi suggestion was returned. Please enter the Hindi spelling manually.');
+      final result = await FirebaseFunctions.instanceFor(region: 'asia-south1')
+          .httpsCallable('transliterateNameToHindi')
+          .call({'text': source});
+      final hindi = (result.data as Map)['hindi'] as String?;
+      if (hindi == null || hindi.trim().isEmpty) {
+        throw Exception('No Hindi suggestion was returned. Please enter the spelling manually.');
       }
       if (!mounted) return;
       setState(() {
         if (sarpanch) {
-          _sarpanchHindi.text = suggestions.first;
+          _sarpanchHindi.text = hindi.trim();
         } else {
-          _panchayatHindi.text = suggestions.first;
+          _panchayatHindi.text = hindi.trim();
         }
       });
     } catch (error) {
