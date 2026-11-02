@@ -22,6 +22,21 @@ service cloud.firestore {
       && request.resource.data.finalCompositedImage is string
       && (request.resource.data.scheduledTime == null || request.resource.data.scheduledTime is timestamp);
     }
+    function validProfileFields(data) {
+      return data.sarpanchName is string
+        && data.panchayatName is string
+        && data.district is string
+        && data.state is string
+        && data.primaryLanguage in ['English', 'Hindi', 'Marathi', 'Telugu', 'Tamil', 'Gujarati'];
+    }
+    function validUserKeys(data) {
+      return data.keys().hasOnly([
+        'uid', 'email', 'username', 'mobileNumber', 'profileComplete',
+        'sarpanchName', 'panchayatName', 'district', 'state',
+        'primaryLanguage', 'imageUrl', 'sealUrl', 'createdAt',
+        'plan', 'billingStatus'
+      ]);
+    }
 
     match /username_claims/{username} {
       allow get: if signedIn();
@@ -37,31 +52,27 @@ service cloud.firestore {
     match /users/{uid} {
       allow read: if owns(uid) || isAdmin();
       allow create: if owns(uid)
+        && validUserKeys(request.resource.data)
         && request.resource.data.uid == uid
-        && request.resource.data.keys().hasOnly([
-          'uid', 'email', 'username', 'mobileNumber', 'profileComplete',
-          'sarpanchName', 'panchayatName', 'district', 'state',
-          'primaryLanguage', 'imageUrl', 'sealUrl', 'createdAt',
-          'plan', 'billingStatus'
-        ])
         && request.resource.data.email is string
         && request.resource.data.username is string
         && request.resource.data.mobileNumber is string
-        && request.resource.data.profileComplete == false
         && request.resource.data.plan == 'free'
-        && request.resource.data.billingStatus == 'active';
+        && request.resource.data.billingStatus == 'active'
+        && (
+          request.resource.data.profileComplete == false
+          || (request.resource.data.profileComplete == true
+            && validProfileFields(request.resource.data))
+        );
       allow update: if owns(uid)
+        && validUserKeys(request.resource.data)
         && request.resource.data.uid == resource.data.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'sarpanchName', 'panchayatName', 'district', 'state',
           'primaryLanguage', 'imageUrl', 'sealUrl', 'profileComplete'
         ])
         && request.resource.data.profileComplete == true
-        && request.resource.data.sarpanchName is string
-        && request.resource.data.panchayatName is string
-        && request.resource.data.district is string
-        && request.resource.data.state is string
-        && request.resource.data.primaryLanguage in ['English', 'Hindi', 'Marathi', 'Telugu', 'Tamil', 'Gujarati'];
+        && validProfileFields(request.resource.data);
       allow delete: if false;
       match /private/{document=**} { allow read, write: if false; }
     }
