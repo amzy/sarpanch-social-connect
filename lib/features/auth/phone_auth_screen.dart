@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -23,6 +24,19 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
     super.dispose();
   }
 
+  Future<void> _bootstrapDevelopmentAdmin() async {
+    try {
+      final callable = FirebaseFunctions.instanceFor(region: 'asia-south1')
+          .httpsCallable('bootstrapDevelopmentAdmin');
+      await callable.call();
+      await FirebaseAuth.instance.currentUser?.getIdToken(true);
+    } on FirebaseFunctionsException catch (error) {
+      // Normal users can sign in; only the allowlisted development account
+      // receives the administrator claim.
+      debugPrint('Development admin bootstrap skipped: ${error.code} ${error.message}');
+    }
+  }
+
   Future<void> _sendOtp() async {
     setState(() { _busy = true; _error = null; });
     final number = _phone.text.trim();
@@ -36,6 +50,8 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         timeout: const Duration(seconds: 60),
         verificationCompleted: (credential) async {
           await FirebaseAuth.instance.signInWithCredential(credential);
+      await _bootstrapDevelopmentAdmin();
+          await _bootstrapDevelopmentAdmin();
         },
         verificationFailed: (exception) => setState(() => _error = exception.message ?? 'Phone verification failed.'),
         codeSent: (verificationId, _) => setState(() => _verificationId = verificationId),
@@ -56,7 +72,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
       final credential = PhoneAuthProvider.credential(verificationId: id, smsCode: _otp.text.trim());
       await FirebaseAuth.instance.signInWithCredential(credential);
     } on FirebaseAuthException catch (error) {
-      setState(() => _error = error.message ?? 'The OTP is invalid or expired.');
+      setState(() => _error = '${error.code}: ${error.message ?? 'The OTP is invalid or expired.'}');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
