@@ -6,6 +6,7 @@ import '../profile/profile_setup_screen.dart';
 import 'approval_queue_screen.dart';
 import 'post_composer_screen.dart';
 import '../profile/data/profile_repository.dart';
+import '../settings/appearance_settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -42,7 +43,13 @@ class _HomeContentState extends State<_HomeContent> {
     return Scaffold(
       appBar: AppBar(
         title: Text(strings.appTitle),
-        actions: [IconButton(tooltip: strings.signOut, onPressed: () => FirebaseAuth.instance.signOut(), icon: const Icon(Icons.logout))],
+        actions: [
+          IconButton(
+            tooltip: 'Appearance and themes',
+            icon: const Icon(Icons.palette_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AppearanceSettingsScreen())),
+          ),
+          IconButton(tooltip: strings.signOut, onPressed: () => FirebaseAuth.instance.signOut(), icon: const Icon(Icons.logout))],
       ),
       body: _index == 0 ? _Dashboard(profile: widget.profile, onCompose: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => PostComposerScreen(profile: widget.profile)))) : const ApprovalQueueScreen(),
       bottomNavigationBar: NavigationBar(
