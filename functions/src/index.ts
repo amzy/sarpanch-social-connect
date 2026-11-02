@@ -62,17 +62,26 @@ export const generatePostCaption = onDocumentCreated({
       `Post type: ${type}.`,
       `Sarpanch name (English): ${String(user.sarpanchName ?? '')}. Sarpanch name (Hindi, exact user-provided spelling): ${String(user.sarpanchNameHindi ?? '')}. Panchayat name (English): ${String(user.panchayatName ?? '')}. Panchayat name (Hindi, exact user-provided spelling): ${String(user.panchayatNameHindi ?? '')}. District: ${String(user.district ?? '')}. State: ${String(user.state ?? '')}.`,
       `User notes: ${rawNotes || 'Create a concise festival greeting based only on the selected festival context.'}`,
-      'Return only the caption text, with no quotation marks or explanation.',
+      'Create exactly THREE distinct ready-to-publish caption options for the same update: (1) concise and direct, (2) warm and community-focused, (3) formal and informative.',
+      'Keep every option factual and grounded only in the user notes and profile. Do not invent achievements, budgets, dates, names, statistics, approvals or promises.',
+      'Return valid JSON only, with this exact shape: {"captions":["option 1","option 2","option 3"]}.',
     ].join('\n');
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
       config: { temperature: 0.55, maxOutputTokens: 700 },
     });
-    const caption = response.text?.trim();
-    if (!caption) throw new Error('Gemini returned an empty caption');
+    const rawResponse = response.text?.trim() ?? '';
+    if (!rawResponse) throw new Error('Gemini returned an empty response');
+    const jsonText = rawResponse.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+    const parsed = JSON.parse(jsonText) as { captions?: unknown };
+    const captions = Array.isArray(parsed.captions)
+      ? parsed.captions.map((value) => String(value).trim()).filter(Boolean).slice(0, 3)
+      : [];
+    if (captions.length < 3) throw new Error('Gemini did not return three caption options');
     await snapshot.ref.update({
-      aiCaption: caption,
+      aiCaptions: captions,
+      aiCaption: captions[0],
       status: 'pending_approval',
       aiGeneratedAt: FieldValue.serverTimestamp(),
       aiLanguage: language,
