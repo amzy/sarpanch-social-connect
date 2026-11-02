@@ -6,17 +6,30 @@ on:
     branches: [main, development]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   flutter:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
       - run: flutter pub get
+      - name: Format Dart files on branch pushes
+        if: github.event_name == 'push'
+        run: |
+          dart format lib
+          if ! git diff --quiet -- lib; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add lib
+            git commit -m "Format Dart source files"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
       - run: dart format --output=none --set-exit-if-changed lib
       - run: flutter analyze
       - run: flutter test
