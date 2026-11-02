@@ -132,10 +132,25 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         'network-request-failed' => 'Check your internet connection.',
         _ => e.message ?? 'Authentication failed: ${e.code}',
       };
-      if (mounted) setState(() => _error = msg);
+      if (mounted) {
+        final detail = e.message?.trim();
+        setState(() {
+          _error = detail == null || detail.isEmpty || detail == 'Error'
+              ? 'Firebase Authentication failed [${e.code}]. Check that Email/Password sign-in is enabled in Firebase Authentication.'
+              : '$msg (Firebase Auth: ${e.code} — $detail)';
+        });
+      }
+    } on FirebaseException catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Firebase ${e.plugin} failed [${e.code}]: ${e.message ?? 'No additional details were provided.'}';
+        });
+      }
     } catch (e) {
       if (mounted) {
-        setState(() => _error = e.toString().replaceFirst('Bad state: ', ''));
+        setState(() {
+          _error = 'Unexpected sign-in/registration error: ${e.toString().replaceFirst('Bad state: ', '')}';
+        });
       }
     } finally {
       if (mounted) setState(() => _busy = false);
