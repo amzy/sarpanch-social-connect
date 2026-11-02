@@ -114,8 +114,8 @@ async function patchDoc(env: Env, path: string, fields: Json, updateTime?: strin
   const token = await googleAccessToken(env);
   const url = new URL(docUrl(env, path));
   for (const key of Object.keys(fields)) url.searchParams.append("updateMask.fieldPaths", key);
+  if (updateTime) url.searchParams.set("currentDocument.updateTime", updateTime);
   const body: Json = { fields: encodeFields(fields) };
-  if (updateTime) body.currentDocument = { updateTime };
   const result = await fetch(url, { method: "PATCH", headers: {
     authorization: `Bearer ${token}`, "content-type": "application/json",
   }, body: JSON.stringify(body) });
@@ -124,9 +124,11 @@ async function patchDoc(env: Env, path: string, fields: Json, updateTime?: strin
 }
 async function createDoc(env: Env, path: string, fields: Json): Promise<void> {
   const token = await googleAccessToken(env);
-  const result = await fetch(docUrl(env, path), { method: "PATCH", headers: {
+  const url = new URL(docUrl(env, path));
+  url.searchParams.set("currentDocument.exists", "false");
+  const result = await fetch(url, { method: "PATCH", headers: {
     authorization: `Bearer ${token}`, "content-type": "application/json",
-  }, body: JSON.stringify({ fields: encodeFields(fields), currentDocument: { exists: false } }) });
+  }, body: JSON.stringify({ fields: encodeFields(fields) }) });
   if (!result.ok) throw new Error(`Firestore create failed (${result.status}): ${(await result.text()).slice(0, 300)}`);
 }
 async function gemini(env: Env, prompt: string, temperature = 0.55, maxOutputTokens = 700): Promise<string> {
@@ -404,7 +406,10 @@ async function handle(request: Request, env: Env): Promise<Response> {
     }
     if (url.pathname === "/api/admin/bootstrap") {
       if (!env.ADMIN_BOOTSTRAP_UID || user.uid !== env.ADMIN_BOOTSTRAP_UID || user.phoneNumber !== "+91900165600") fail("Not authorized.", 403);
-      return response({ error: "Admin custom claims must be configured through Firebase Admin tooling; this endpoint intentionally does not grant client-controlled privileges." }, 501, origin);
+      const adminPath = `admins/${user.uid}`;
+      const existingAdmin = await getDoc(env, adminPath).catch(() => null);
+      if (!existingAdmin) await createDoc(env, adminPath, { uid: user.uid, role: "admin", createdAt: { __timestamp: new Date().toISOString() } });
+      return response({ isAdmin: true, alreadyConfigured: Boolean(existingAdmin) }, 200, origin);
     }
     return response({ error: "Not found." }, 404, origin);
   } catch (error) {
