@@ -14,11 +14,14 @@ class FailedPostsScreen extends StatelessWidget {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: PostRepository().watchFailed(uid),
       builder: (context, snapshot) {
-        if (snapshot.hasError)
+        if (snapshot.hasError) {
           return Center(
-              child: Text('Unable to load failed posts: ${snapshot.error}'));
-        if (!snapshot.hasData)
+            child: Text('Unable to load failed posts: ${snapshot.error}'),
+          );
+        }
+        if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
+        }
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) return const Center(child: Text('No failed posts.'));
         return ListView.builder(
