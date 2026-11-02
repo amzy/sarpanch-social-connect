@@ -5,12 +5,9 @@ import 'package:http/http.dart' as http;
 
 /// Authenticated HTTP client for the Cloudflare Worker backend.
 class BackendApiService {
-  BackendApiService({FirebaseAuth? auth, http.Client? client})
-      : _auth = auth ?? FirebaseAuth.instance,
-        _client = client ?? http.Client();
+  BackendApiService({FirebaseAuth? auth}) : _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseAuth _auth;
-  final http.Client _client;
 
   static const String _baseUrl = String.fromEnvironment(
     'BACKEND_API_URL',
@@ -33,7 +30,7 @@ class BackendApiService {
       throw StateError('Your sign-in session has expired. Please sign in again.');
     }
     final uri = Uri.parse('${_baseUrl.replaceFirst(RegExp(r'/+$'), '')}$path');
-    final result = await _client
+    final result = await http
         .post(
           uri,
           headers: {
