@@ -52,10 +52,12 @@ class ImageUploadService {
       if (bytes.length > maxWebBytes) {
         throw Exception('Image is larger than 10 MB. Choose a smaller image.');
       }
-      await ref.putData(
-        bytes,
-        SettableMetadata(contentType: _contentType(file.name)),
-      ).timeout(const Duration(seconds: 60));
+      await ref
+          .putData(
+            bytes,
+            SettableMetadata(contentType: _contentType(file.name)),
+          )
+          .timeout(const Duration(seconds: 60));
     } else {
       final compressed = await compress(file);
       await ref.putFile(
@@ -94,7 +96,8 @@ class ImageUploadService {
       if (bytes.length > maxWebBytes) {
         throw Exception('Generated poster is larger than 10 MB.');
       }
-      await ref.putData(bytes, SettableMetadata(contentType: 'image/png'))
+      await ref
+          .putData(bytes, SettableMetadata(contentType: 'image/png'))
           .timeout(const Duration(seconds: 60));
       return ref.getDownloadURL().timeout(const Duration(seconds: 20));
     }

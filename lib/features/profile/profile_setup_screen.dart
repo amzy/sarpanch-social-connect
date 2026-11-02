@@ -118,7 +118,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
     if (!_formKey.currentState!.validate()) return;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      setState(() => _error = 'Your session has expired. Please sign in again.');
+      setState(
+          () => _error = 'Your session has expired. Please sign in again.');
       return;
     }
     setState(() {
@@ -131,19 +132,23 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       String sealUrl = (widget.initialProfile?['sealUrl'] as String?) ?? '';
       if (_profileImage != null) {
         setState(() => _saveStage = 'Uploading profile picture…');
-        imageUrl = await _uploads.uploadFile(
-          uid: user.uid,
-          path: 'users/${user.uid}/profile/profile.jpg',
-          file: _profileImage!,
-        ).timeout(const Duration(seconds: 90));
+        imageUrl = await _uploads
+            .uploadFile(
+              uid: user.uid,
+              path: 'users/${user.uid}/profile/profile.jpg',
+              file: _profileImage!,
+            )
+            .timeout(const Duration(seconds: 90));
       }
       if (_sealImage != null) {
         setState(() => _saveStage = 'Uploading Panchayat seal…');
-        sealUrl = await _uploads.uploadFile(
-          uid: user.uid,
-          path: 'users/${user.uid}/profile/seal.jpg',
-          file: _sealImage!,
-        ).timeout(const Duration(seconds: 90));
+        sealUrl = await _uploads
+            .uploadFile(
+              uid: user.uid,
+              path: 'users/${user.uid}/profile/seal.jpg',
+              file: _sealImage!,
+            )
+            .timeout(const Duration(seconds: 90));
       }
       setState(() => _saveStage = 'Saving profile details…');
       await ProfileRepository().completeProfile(
@@ -163,7 +168,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       ).timeout(const Duration(seconds: 30));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Panchayat profile saved successfully.')),
+          const SnackBar(
+              content: Text('Panchayat profile saved successfully.')),
         );
       }
     } catch (error) {
