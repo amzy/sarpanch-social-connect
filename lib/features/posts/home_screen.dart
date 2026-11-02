@@ -78,7 +78,7 @@ class _Dashboard extends StatelessWidget {
     final language = (profile['primaryLanguage'] as String?) ?? 'Hindi';
     return ListView(padding: const EdgeInsets.all(20), children: [
       Card(child: Padding(padding: const EdgeInsets.all(20), child: Row(children: [
-        CircleAvatar(radius: 32, foregroundImage: (profile['imageUrl'] as String?) ?? ''.isNotEmpty ? NetworkImage((profile['imageUrl'] as String?) ?? '') : null, child: String(profile['imageUrl'] ?? '').isEmpty ? const Icon(Icons.person, size: 30) : null),
+        CircleAvatar(radius: 32, foregroundImage: (profile['imageUrl'] as String?) ?? ''.isNotEmpty ? NetworkImage((profile['imageUrl'] as String?) ?? '') : null, child: (profile['imageUrl'] as String?) ?? ''.isEmpty ? const Icon(Icons.person, size: 30) : null),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), Text(panchayat), Text(language, style: Theme.of(context).textTheme.bodySmall)])),
       ]))),
