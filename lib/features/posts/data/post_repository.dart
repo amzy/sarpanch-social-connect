@@ -15,6 +15,14 @@ class PostRepository {
           .orderBy('creationTimestamp', descending: true)
           .snapshots();
 
+  Stream<QuerySnapshot<Map<String, dynamic>>> watchFailed(String uid) =>
+      _firestore
+          .collection('posts_queue')
+          .where('uid', isEqualTo: uid)
+          .where('status', isEqualTo: 'failed')
+          .orderBy('creationTimestamp', descending: true)
+          .snapshots();
+
   Future<void> createPost(Map<String, Object?> post) async {
     final postId = post['postId'] as String;
     await _firestore.collection('posts_queue').doc(postId).set({
