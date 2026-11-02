@@ -16,9 +16,7 @@ class DefaultFirebaseOptions {
       case TargetPlatform.linux:
       case TargetPlatform.macOS:
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'Firebase is not configured for this platform.',
-        );
+        throw UnsupportedError('Firebase is not configured for this platform.');
     }
   }
 

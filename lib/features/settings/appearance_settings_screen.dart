@@ -22,7 +22,8 @@ class AppearanceSettingsScreen extends ConsumerWidget {
           const SizedBox(height: 6),
           Text(
             'Choose an accent palette. Your Panchayat logo, official seal and poster identity remain unchanged.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: colors.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
           ...AppThemeId.values.map((themeId) {
@@ -39,30 +40,41 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(13),
                     border: Border.all(color: colors.outlineVariant),
                   ),
-                  child: selected ? const Icon(Icons.check, color: Colors.white) : null,
+                  child: selected
+                      ? const Icon(Icons.check, color: Colors.white)
+                      : null,
                 ),
                 title: Text(themeId.label),
                 subtitle: Text(themeId.description),
                 trailing: Icon(
-                  selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                  selected
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
                   color: selected ? colors.primary : colors.onSurfaceVariant,
                 ),
               ),
             );
           }),
           const SizedBox(height: 24),
-          Text('Appearance mode', style: Theme.of(context).textTheme.titleLarge),
+          Text(
+            'Appearance mode',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
           const SizedBox(height: 6),
           Text(
             'Use light or dark appearance, or follow your device setting.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: colors.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<ThemeMode>(
             initialValue: appearance.themeMode,
             decoration: const InputDecoration(labelText: 'Display mode'),
             items: const [
-              DropdownMenuItem(value: ThemeMode.system, child: Text('Follow system')),
+              DropdownMenuItem(
+                value: ThemeMode.system,
+                child: Text('Follow system'),
+              ),
               DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
               DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
             ],

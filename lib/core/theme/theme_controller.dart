@@ -63,5 +63,5 @@ class AppearanceController extends StateNotifier<AppAppearance> {
 
 final appearanceControllerProvider =
     StateNotifierProvider<AppearanceController, AppAppearance>(
-  (ref) => AppearanceController(),
-);
+      (ref) => AppearanceController(),
+    );

@@ -38,10 +38,10 @@ class SarpanchSocialConnectApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       home: auth.when(
-        data: (user) => user == null ? const PhoneAuthScreen() : const HomeScreen(),
-        loading: () => const Scaffold(
-          body: Center(child: CircularProgressIndicator()),
-        ),
+        data: (user) =>
+            user == null ? const PhoneAuthScreen() : const HomeScreen(),
+        loading: () =>
+            const Scaffold(body: Center(child: CircularProgressIndicator())),
         error: (_, __) => const PhoneAuthScreen(),
       ),
     );

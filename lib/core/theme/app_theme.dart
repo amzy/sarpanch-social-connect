@@ -11,22 +11,22 @@ enum AppThemeId {
 
 extension AppThemeIdLabel on AppThemeId {
   String get label => switch (this) {
-        AppThemeId.governmentBlue => 'Government Blue',
-        AppThemeId.gramGreen => 'Gram Green',
-        AppThemeId.saffronOrange => 'Saffron Orange',
-        AppThemeId.royalPurple => 'Royal Purple',
-        AppThemeId.tealCyan => 'Teal Cyan',
-        AppThemeId.crimsonRed => 'Crimson Red',
-      };
+    AppThemeId.governmentBlue => 'Government Blue',
+    AppThemeId.gramGreen => 'Gram Green',
+    AppThemeId.saffronOrange => 'Saffron Orange',
+    AppThemeId.royalPurple => 'Royal Purple',
+    AppThemeId.tealCyan => 'Teal Cyan',
+    AppThemeId.crimsonRed => 'Crimson Red',
+  };
 
   String get description => switch (this) {
-        AppThemeId.governmentBlue => 'Official and dependable',
-        AppThemeId.gramGreen => 'Growth and village development',
-        AppThemeId.saffronOrange => 'Energy and progress',
-        AppThemeId.royalPurple => 'Modern and creative',
-        AppThemeId.tealCyan => 'Digital and inclusive',
-        AppThemeId.crimsonRed => 'Leadership and impact',
-      };
+    AppThemeId.governmentBlue => 'Official and dependable',
+    AppThemeId.gramGreen => 'Growth and village development',
+    AppThemeId.saffronOrange => 'Energy and progress',
+    AppThemeId.royalPurple => 'Modern and creative',
+    AppThemeId.tealCyan => 'Digital and inclusive',
+    AppThemeId.crimsonRed => 'Leadership and impact',
+  };
 }
 
 class BrandPalette {
