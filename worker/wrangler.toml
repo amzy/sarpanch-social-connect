@@ -6,3 +6,4 @@ workers_dev = true
 [vars]
 FIREBASE_PROJECT_ID = "sarpanch-social-connect"
 META_GRAPH_VERSION = "v23.0"
+ALLOWED_ORIGINS = "https://amzy.github.io"
