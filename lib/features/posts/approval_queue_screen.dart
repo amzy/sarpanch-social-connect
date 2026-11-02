@@ -48,6 +48,7 @@ class _ApprovalCard extends StatefulWidget {
 class _ApprovalCardState extends State<_ApprovalCard> {
   late final TextEditingController _caption;
   bool _busy = false;
+  int _selectedCaption = 0;
   String? _error;
 
   @override
@@ -123,12 +124,35 @@ class _ApprovalCardState extends State<_ApprovalCard> {
                 ),
               ),
             const SizedBox(height: 12),
+            if (data['aiCaptions'] is List && (data['aiCaptions'] as List).isNotEmpty) ...[
+              Text('Choose a caption', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              ...((data['aiCaptions'] as List).asMap().entries.map((entry) {
+                final index = entry.key;
+                final caption = entry.value.toString();
+                return Card(
+                  child: RadioListTile<int>(
+                    value: index,
+                    groupValue: _selectedCaption,
+                    title: Text(caption),
+                    subtitle: Text('Option ${index + 1}'),
+                    onChanged: _busy ? null : (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _selectedCaption = value;
+                        _caption.text = caption;
+                      });
+                    },
+                  ),
+                );
+              })),
+            ],
             TextField(
               controller: _caption,
               minLines: 3,
               maxLines: 8,
               decoration: InputDecoration(
-                labelText: strings.caption,
+                labelText: 'Edit selected caption',
                 alignLabelWithHint: true,
               ),
             ),
