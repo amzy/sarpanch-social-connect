@@ -7,13 +7,14 @@ service cloud.firestore {
     function validPostType(type) { return type in ['festival', 'development']; }
     function validClientPostCreate(postId) {
       return request.resource.data.keys().hasOnly([
-        'postId', 'uid', 'type', 'creationTimestamp', 'rawNotes',
+        'postId', 'uid', 'type', 'contentLanguage', 'creationTimestamp', 'rawNotes',
         'beforeImageUrl', 'afterImageUrl', 'finalCompositedImage',
         'status', 'scheduledTime'
       ])
       && request.resource.data.uid == request.auth.uid
       && request.resource.data.postId == postId
       && validPostType(request.resource.data.type)
+      && request.resource.data.contentLanguage in ['English', 'Hindi', 'Marathi', 'Telugu', 'Tamil', 'Gujarati']
       && request.resource.data.status == 'pending_ai'
       && request.resource.data.creationTimestamp == request.time
       && request.resource.data.rawNotes is string
