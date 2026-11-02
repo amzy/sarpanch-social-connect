@@ -26,9 +26,7 @@ class BackendApiService {
     }
     final user = _auth.currentUser;
     if (user == null) throw StateError('Please sign in again.');
-    // Force-refresh the Firebase ID token before calling the Worker. This avoids
-    // sending a cached token that may already have expired in the browser session.
-    final token = await user.getIdToken(true);
+    final token = await user.getIdToken();
     if (token == null || token.isEmpty) {
       throw StateError(
           'Your sign-in session has expired. Please sign in again.');
@@ -115,10 +113,7 @@ class BackendApiService {
     });
   }
 
-  Future<Map<String, dynamic>> getSocialSetup() =>
-      _post('/api/social/setup/read', const {});
-
-  Future<void> saveSocialSetup(Map<String, dynamic> profiles) async {
-    await _post('/api/social/setup', {'profiles': profiles});
+  Future<void> saveSocialCredentials(Map<String, String> credentials) async {
+    await _post('/api/social/credentials', credentials);
   }
 }
