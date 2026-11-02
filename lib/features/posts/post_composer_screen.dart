@@ -124,15 +124,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   Future<void> _submit() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
-    if (_type == 'development' && (_before == null || _after == null)) {
-      setState(
-        () => _error =
-            'Choose both before and after photos for a development update.',
-      );
-      return;
-    }
-    if (_type == 'festival' && _notes.text.trim().isEmpty) {
-      setState(() => _error = 'Add the festival name or greeting context.');
+    if (_notes.text.trim().isEmpty) {
+      setState(() => _error = 'Describe the update before generating captions.');
       return;
     }
     setState(() {
@@ -203,21 +196,20 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          SegmentedButton<String>(
-            segments: [
-              ButtonSegment(
-                value: 'development',
-                label: Text(strings.development),
-                icon: const Icon(Icons.construction_outlined),
-              ),
-              ButtonSegment(
-                value: 'festival',
-                label: Text(strings.festival),
-                icon: const Icon(Icons.celebration_outlined),
-              ),
+          DropdownButtonFormField<String>(
+            initialValue: _type,
+            decoration: const InputDecoration(labelText: 'Post type'),
+            items: const [
+              DropdownMenuItem(value: 'development', child: Text('Development update')),
+              DropdownMenuItem(value: 'festival', child: Text('Festival / greeting')),
+              DropdownMenuItem(value: 'announcement', child: Text('Public announcement')),
+              DropdownMenuItem(value: 'project', child: Text('Project update')),
+              DropdownMenuItem(value: 'event', child: Text('Community event')),
+              DropdownMenuItem(value: 'public_service', child: Text('Public service')),
             ],
-            selected: {_type},
-            onSelectionChanged: (value) => setState(() => _type = value.first),
+            onChanged: (value) {
+              if (value != null) setState(() => _type = value);
+            },
           ),
           const SizedBox(height: 14),
           DropdownButtonFormField<String>(
@@ -245,28 +237,41 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
               alignLabelWithHint: true,
             ),
           ),
-          if (_type == 'development') ...[
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () => _choose(true),
-              icon: const Icon(Icons.add_photo_alternate_outlined),
-              label: Text(
-                _before == null ? 'Select BEFORE photo' : 'Change BEFORE photo',
+          const SizedBox(height: 12),
+          OutlinedButton.icon(
+            onPressed: _saving ? null : () => _choose(true),
+            icon: const Icon(Icons.add_photo_alternate_outlined),
+            label: Text(_before == null ? 'Add BEFORE photo (optional)' : 'Change BEFORE photo'),
+          ),
+          if (_before != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => setState(() => _before = null),
+                child: const Text('Remove before photo'),
               ),
             ),
-            OutlinedButton.icon(
-              onPressed: () => _choose(false),
-              icon: const Icon(Icons.add_photo_alternate_outlined),
-              label: Text(
-                _after == null ? 'Select AFTER photo' : 'Change AFTER photo',
+          OutlinedButton.icon(
+            onPressed: _saving ? null : () => _choose(false),
+            icon: const Icon(Icons.add_photo_alternate_outlined),
+            label: Text(_after == null ? 'Add AFTER photo (optional)' : 'Change AFTER photo'),
+          ),
+          if (_after != null)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => setState(() => _after = null),
+                child: const Text('Remove after photo'),
               ),
             ),
-            SwitchListTile(
-              title: const Text('Stack photos vertically'),
-              value: _stacked,
-              onChanged: (value) => setState(() => _stacked = value),
-            ),
-          ],
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Stack photos vertically'),
+            value: _stacked,
+            onChanged: (_before == null && _after == null)
+                ? null
+                : (value) => setState(() => _stacked = value),
+          ),
           const SizedBox(height: 16),
           Text('Preview', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
