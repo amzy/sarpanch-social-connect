@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { GoogleGenAI } from '@google/genai';
 import { initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { logger } from 'firebase-functions';
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
@@ -201,4 +202,34 @@ export const retryFailedPost = onCall({ region: FUNCTION_REGION }, async (reques
   if (!aiRetry) retryPayload.aiCaption = String(previous.aiCaption ?? '');
   await db.doc(`posts_queue/${nextPostId}`).create(retryPayload);
   return { queued: true, postId: nextPostId, status: aiRetry ? 'pending_ai' : 'pending_approval' };
+});
+
+/**
+ * One-time development administrator bootstrap.
+ * Access is granted only to the explicitly verified development phone number.
+ */
+export const bootstrapDevelopmentAdmin = onCall({ region: FUNCTION_REGION }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in with your verified phone number first.');
+  const verifiedPhone = String(request.auth.token.phone_number ?? '');
+  if (verifiedPhone !== '+91900165600') {
+    throw new HttpsError('permission-denied', 'This account is not on the development administrator allowlist.');
+  }
+
+  const existingClaims = request.auth.token;
+  if (existingClaims.admin === true && existingClaims.developmentAdmin === true) {
+    return { isAdmin: true, alreadyConfigured: true };
+  }
+
+  await getAuth().setCustomUserClaims(request.auth.uid, {
+    ...existingClaims,
+    admin: true,
+    developmentAdmin: true,
+  });
+  await db.doc(`users/${request.auth.uid}`).set({
+    role: 'admin',
+    developmentAdmin: true,
+    adminGrantedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  return { isAdmin: true, alreadyConfigured: false };
 });
