@@ -402,6 +402,28 @@ async function handle(request: Request, env: Env): Promise<Response> {
       }
       return response(await publish(env, user.uid, postId), 200, origin);
     }
+    if (url.pathname === "/api/posts/whatsapp-delivery") {
+      const postId = String(body.postId ?? "");
+      const destination = String(body.destination ?? "");
+      const confirmed = body.confirmed === true;
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(postId)) fail("A valid postId is required.");
+      if (!["group", "channel"].includes(destination)) fail("Choose a valid WhatsApp destination.");
+      if (!confirmed) fail("Delivery can only be recorded after explicit confirmation.");
+      const path = `posts_queue/${postId}`;
+      const post = await getDoc(env, path);
+      if (post.data.uid !== user.uid) fail("Post not found.", 404);
+      const previous = (post.data.whatsappDelivery ?? {}) as Json;
+      const delivery = {
+        ...previous,
+        [destination]: {
+          status: "confirmed_by_admin",
+          confirmedAt: { __timestamp: new Date().toISOString() },
+          confirmedBy: user.uid,
+        },
+      };
+      await patchDoc(env, path, { whatsappDelivery: delivery }, post.updateTime);
+      return response({ saved: true, destination, status: "confirmed_by_admin" }, 200, origin);
+    }
     if (url.pathname === "/api/social/credentials") {
       const allowed = ["facebookPageToken", "facebookPageId", "instagramId", "twitterToken"];
       if (Object.keys(body).some(key => !allowed.includes(key))) fail("Unsupported credential field.");
