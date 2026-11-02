@@ -151,32 +151,35 @@ class _ApprovalCardState extends State<_ApprovalCard> {
                 ),
               ),
             const SizedBox(height: 12),
-            if (data['aiCaptions'] is List &&
-                (data['aiCaptions'] as List).isNotEmpty) ...[
-              Text('Choose a caption',
-                  style: Theme.of(context).textTheme.titleMedium),
+            if (data['aiCaptions'] is List && (data['aiCaptions'] as List).isNotEmpty) ...[
+              Text('Choose a caption', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
-              ...((data['aiCaptions'] as List).asMap().entries.map((entry) {
-                final index = entry.key;
-                final caption = entry.value.toString();
-                return Card(
-                  child: RadioListTile<int>(
-                    value: index,
-                    groupValue: _selectedCaption,
-                    title: Text(caption),
-                    subtitle: Text('Option ${index + 1}'),
-                    onChanged: _busy
-                        ? null
-                        : (value) {
-                            if (value == null) return;
-                            setState(() {
-                              _selectedCaption = value;
-                              _caption.text = caption;
-                            });
-                          },
-                  ),
-                );
-              })),
+              RadioGroup<int>(
+                groupValue: _selectedCaption,
+                onChanged: _busy
+                    ? null
+                    : (value) {
+                        if (value == null) return;
+                        final captions = data['aiCaptions'] as List;
+                        setState(() {
+                          _selectedCaption = value;
+                          _caption.text = captions[value].toString();
+                        });
+                      },
+                child: Column(
+                  children: (data['aiCaptions'] as List)
+                      .asMap()
+                      .entries
+                      .map((entry) => Card(
+                            child: RadioListTile<int>(
+                              value: entry.key,
+                              title: Text(entry.value.toString()),
+                              subtitle: Text('Option ${entry.key + 1}'),
+                            ),
+                          ))
+                      .toList(),
+                ),
+              ),
             ],
             OutlinedButton.icon(
               onPressed: (_busy || _refreshing) ? null : _moreOptions,
