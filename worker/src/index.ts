@@ -425,7 +425,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
       if (post.data.status === "pending_ai") {
         return response(await generateForPost(env, user.uid, postId, false), 200, origin);
       }
-      if (["AI_GENERATION_FAILED", "FREE_MONTHLY_LIMIT_REACHED", "BILLING_INACTIVE", "UNSUPPORTED_LANGUAGE"].includes(String(post.data.failureCode ?? ""))) {
+      if (["AI_GENERATION_FAILED", "FREE_MONTHLY_LIMIT_REACHED", "BILLING_INACTIVE", "UNSUPPORTED_LANGUAGE", "CLIENT_GENERATION_REQUEST_FAILED"].includes(String(post.data.failureCode ?? ""))) {
         await patchDoc(env, `posts_queue/${postId}`, { status: "pending_ai", failureCode: null, failureMessage: null }, post.updateTime);
         return response(await generateForPost(env, user.uid, postId, false), 200, origin);
       }
