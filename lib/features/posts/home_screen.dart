@@ -53,6 +53,15 @@ class _HomeContentState extends State<_HomeContent> {
         title: Text(strings.appTitle),
         actions: [
           IconButton(
+            tooltip: 'Edit Panchayat profile',
+            icon: const Icon(Icons.edit_note),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ProfileSetupScreen(initialProfile: widget.profile),
+              ),
+            ),
+          ),
+          IconButton(
             tooltip: 'Appearance and themes',
             icon: const Icon(Icons.palette_outlined),
             onPressed: () => Navigator.of(context).push(
