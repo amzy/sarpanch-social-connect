@@ -89,6 +89,13 @@ service cloud.firestore {
         && resource.data.uid == request.auth.uid
         && request.resource.data.uid == resource.data.uid
         && (
+          (resource.data.status == 'pending_ai'
+            && request.resource.data.status == 'failed'
+            && request.resource.data.failureCode == 'CLIENT_GENERATION_REQUEST_FAILED'
+            && request.resource.data.failureMessage is string
+            && request.resource.data.failureMessage.size() <= 500
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'failureCode', 'failureMessage']))
+          ||
           (resource.data.status == 'pending_approval'
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['aiCaption', 'scheduledTime'])
             && request.resource.data.aiCaption is string)
