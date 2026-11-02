@@ -12,8 +12,9 @@ class ApprovalQueueScreen extends StatelessWidget {
 
   Future<void> _shareWhatsApp(String destination) async {
     final data = widget.post.data();
-    final destinationName =
-        destination == 'group' ? 'Panchayat WhatsApp Group' : 'Panchayat WhatsApp Channel';
+    final destinationName = destination == 'group'
+        ? 'Panchayat WhatsApp Group'
+        : 'Panchayat WhatsApp Channel';
     final guidance = destination == 'group'
         ? 'In the share sheet, choose WhatsApp and select the official Panchayat group.'
         : 'Share the image and caption to WhatsApp, then open the official Panchayat Channel and publish the update there.';
@@ -52,7 +53,8 @@ class ApprovalQueueScreen extends StatelessWidget {
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Confirm WhatsApp delivery'),
-          content: Text('Did you successfully share this update to the $destinationName?'),
+          content: Text(
+              'Did you successfully share this update to the $destinationName?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
