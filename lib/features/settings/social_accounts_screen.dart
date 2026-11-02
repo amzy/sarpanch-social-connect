@@ -27,7 +27,7 @@ class _SocialAccountsScreenState extends State<SocialAccountsScreen> {
   void initState() {
     super.initState();
     for (final p in platforms) {
-      handles[p.id] = TextEditingController(text: '@PunchatSarpanch');
+      handles[p.id] = TextEditingController(text: '@PanchayatSarpanch');
       urls[p.id] = TextEditingController();
       statuses[p.id] = 'not_started';
     }
@@ -42,7 +42,7 @@ class _SocialAccountsScreenState extends State<SocialAccountsScreen> {
         for (final p in platforms) {
           final item = profiles[p.id];
           if (item is Map) {
-            handles[p.id]!.text = item['handle']?.toString() ?? '@PunchatSarpanch';
+            handles[p.id]!.text = item['handle']?.toString() ?? '@PanchayatSarpanch';
             urls[p.id]!.text = item['profileUrl']?.toString() ?? '';
             final status = item['status']?.toString() ?? 'not_started';
             statuses[p.id] = ['not_started', 'created', 'connected', 'manual_only'].contains(status) ? status : 'not_started';
@@ -95,7 +95,7 @@ class _SocialAccountsScreenState extends State<SocialAccountsScreen> {
             const SizedBox(height: 6),
             LinearProgressIndicator(value: completed / 6),
             const SizedBox(height: 12),
-            const Text('Suggested identity: Punchat Sarpanch\nSuggested handle: @PunchatSarpanch', style: TextStyle(fontWeight: FontWeight.w600)),
+            const Text('Suggested identity: Panchayat Sarpanch\nSuggested handle: @PanchayatSarpanch', style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
             const Text('Check username availability on each platform. This app cannot reserve usernames or create third-party accounts automatically.', style: TextStyle(fontSize: 12)),
           ]))),
