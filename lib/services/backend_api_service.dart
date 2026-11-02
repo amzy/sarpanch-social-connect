@@ -5,7 +5,8 @@ import 'package:http/http.dart' as http;
 
 /// Authenticated HTTP client for the Cloudflare Worker backend.
 class BackendApiService {
-  BackendApiService({FirebaseAuth? auth}) : _auth = auth ?? FirebaseAuth.instance;
+  BackendApiService({FirebaseAuth? auth})
+      : _auth = auth ?? FirebaseAuth.instance;
 
   final FirebaseAuth _auth;
 
@@ -27,7 +28,8 @@ class BackendApiService {
     if (user == null) throw StateError('Please sign in again.');
     final token = await user.getIdToken();
     if (token == null || token.isEmpty) {
-      throw StateError('Your sign-in session has expired. Please sign in again.');
+      throw StateError(
+          'Your sign-in session has expired. Please sign in again.');
     }
     final uri = Uri.parse('${_baseUrl.replaceFirst(RegExp(r'/+$'), '')}$path');
     final result = await http
@@ -56,12 +58,16 @@ class BackendApiService {
 
   Future<List<String>> generatePost(String postId) async {
     final data = await _post('/api/posts/generate', {'postId': postId});
-    return (data['captions'] as List? ?? const []).map((e) => e.toString()).toList();
+    return (data['captions'] as List? ?? const [])
+        .map((e) => e.toString())
+        .toList();
   }
 
   Future<List<String>> moreCaptionOptions(String postId) async {
     final data = await _post('/api/posts/more-options', {'postId': postId});
-    return (data['captions'] as List? ?? const []).map((e) => e.toString()).toList();
+    return (data['captions'] as List? ?? const [])
+        .map((e) => e.toString())
+        .toList();
   }
 
   Future<String> transliterateName(String text) async {

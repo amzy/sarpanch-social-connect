@@ -35,8 +35,7 @@ class _SocialAccountsScreenState extends State<SocialAccountsScreen> {
         'facebookPageToken': _facebookToken.text.trim(),
       if (_instagramId.text.trim().isNotEmpty)
         'instagramId': _instagramId.text.trim(),
-      if (_xToken.text.trim().isNotEmpty)
-        'twitterToken': _xToken.text.trim(),
+      if (_xToken.text.trim().isNotEmpty) 'twitterToken': _xToken.text.trim(),
     };
     if (values.isEmpty) {
       setState(() => _error = 'Enter at least one account value to save.');
@@ -114,14 +113,19 @@ class _SocialAccountsScreenState extends State<SocialAccountsScreen> {
           ),
           const SizedBox(height: 16),
           if (_message != null)
-            Text(_message!, style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+            Text(_message!,
+                style: TextStyle(color: Theme.of(context).colorScheme.primary)),
           if (_error != null)
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            Text(_error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
           const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: _saving ? null : _save,
             icon: _saving
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2))
                 : const Icon(Icons.lock_outline),
             label: Text(_saving ? 'Saving…' : 'Save credentials securely'),
           ),

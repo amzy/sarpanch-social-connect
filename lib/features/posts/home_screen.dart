@@ -96,7 +96,9 @@ class _HomeContentState extends State<_HomeContent> {
                 ),
               ),
             )
-          : _index == 1 ? const ApprovalQueueScreen() : const FailedPostsScreen(),
+          : _index == 1
+              ? const ApprovalQueueScreen()
+              : const FailedPostsScreen(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),

@@ -73,7 +73,8 @@ class _ApprovalCardState extends State<_ApprovalCard> {
       _error = null;
     });
     try {
-      final captions = await BackendApiService().moreCaptionOptions(widget.post.id);
+      final captions =
+          await BackendApiService().moreCaptionOptions(widget.post.id);
       if (!mounted || captions.isEmpty) return;
       setState(() {
         _selectedCaption = 0;

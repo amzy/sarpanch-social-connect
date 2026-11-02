@@ -14,8 +14,11 @@ class FailedPostsScreen extends StatelessWidget {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: PostRepository().watchFailed(uid),
       builder: (context, snapshot) {
-        if (snapshot.hasError) return Center(child: Text('Unable to load failed posts: ${snapshot.error}'));
-        if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError)
+          return Center(
+              child: Text('Unable to load failed posts: ${snapshot.error}'));
+        if (!snapshot.hasData)
+          return const Center(child: CircularProgressIndicator());
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) return const Center(child: Text('No failed posts.'));
         return ListView.builder(
@@ -41,7 +44,10 @@ class _FailedPostCardState extends State<_FailedPostCard> {
   String? _error;
 
   Future<void> _retry() async {
-    setState(() { _busy = true; _error = null; });
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
       await BackendApiService().retryPost(widget.post.id);
     } catch (error) {
@@ -63,17 +69,33 @@ class _FailedPostCardState extends State<_FailedPostCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text((data['rawNotes'] as String?) ?? 'Post', style: Theme.of(context).textTheme.titleMedium),
-            if (caption.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(caption, maxLines: 4, overflow: TextOverflow.ellipsis)),
+            Text((data['rawNotes'] as String?) ?? 'Post',
+                style: Theme.of(context).textTheme.titleMedium),
+            if (caption.isNotEmpty)
+              Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(caption,
+                      maxLines: 4, overflow: TextOverflow.ellipsis)),
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text('Failure: $failure', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              child: Text('Failure: $failure',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
-            if (_error != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
+            if (_error != null)
+              Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(_error!,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error))),
             const SizedBox(height: 10),
             FilledButton.icon(
               onPressed: _busy ? null : _retry,
-              icon: _busy ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.refresh),
+              icon: _busy
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.refresh),
               label: Text(_busy ? 'Retrying…' : 'Retry'),
             ),
           ],
