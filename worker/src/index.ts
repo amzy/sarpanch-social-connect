@@ -69,24 +69,9 @@ async function verifyUser(request: Request, env: Env): Promise<{ uid: string; ph
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ idToken: authorization.slice(7) }),
   });
-  const result = await lookup.json() as {
-    users?: Array<{ localId?: string; phoneNumber?: string }>;
-    error?: { message?: string };
-  };
+  const result = await lookup.json() as { users?: Array<{ localId?: string; phoneNumber?: string }> };
   const user = result.users?.[0];
-  if (!lookup.ok || !user?.localId) {
-    const code = String(result.error?.message ?? "UNKNOWN_AUTH_ERROR").toUpperCase();
-    const messages: Record<string, string> = {
-      INVALID_ID_TOKEN: "Firebase rejected the sign-in token. Refresh the page and sign in again.",
-      ID_TOKEN_EXPIRED: "Your sign-in token expired. Refresh the page and sign in again.",
-      USER_DISABLED: "This Firebase account is disabled. Contact the administrator.",
-      API_KEY_INVALID: "The backend Firebase Web API key is invalid. Check the FIREBASE_WEB_API_KEY Worker secret.",
-      API_KEY_HTTP_REFERRER_BLOCKED: "The backend Firebase Web API key is restricted by browser referrer rules. Allow Identity Toolkit server requests for this key.",
-      PROJECT_NOT_FOUND: "The Firebase project configured for the backend was not found.",
-    };
-    const message = messages[code] ?? `Firebase authentication lookup failed (${code}).`;
-    fail(message, lookup.status >= 500 ? 503 : 401);
-  }
+  if (!lookup.ok || !user?.localId) fail("Your session is invalid or expired. Sign in again.", 401);
   return { uid: user.localId, phoneNumber: user.phoneNumber };
 }
 function decodeValue(value: any): any {
@@ -458,35 +443,6 @@ async function handle(request: Request, env: Env): Promise<Response> {
       };
       await patchDoc(env, path, { whatsappDelivery: delivery }, post.updateTime);
       return response({ saved: true, destination, status: "confirmed_by_admin" }, 200, origin);
-    }
-    if (url.pathname === "/api/social/setup/read") {
-      const setupPath = "users/" + user.uid + "/private/socialSetup";
-      const setup = await getDoc(env, setupPath).catch(error => { if ((error as any)?.status === 404) return null; throw error; });
-      return response({ profiles: setup?.data.profiles ?? {} }, 200, origin);
-    }
-    if (url.pathname === "/api/social/setup") {
-      const profiles = body.profiles;
-      if (!profiles || typeof profiles !== "object" || Array.isArray(profiles)) fail("Social profiles are required.");
-      const platforms = ["facebook", "instagram", "whatsappBusiness", "whatsappChannel", "youtube", "x"];
-      const statuses = ["not_started", "created", "connected", "manual_only"];
-      const normalized: Json = {};
-      for (const platform of platforms) {
-        const item = (profiles as Json)[platform];
-        if (!item || typeof item !== "object" || Array.isArray(item)) continue;
-        const profile = item as Json;
-        const handle = String(profile.handle ?? "").trim();
-        const profileUrl = String(profile.profileUrl ?? "").trim();
-        const status = String(profile.status ?? "not_started");
-        if (handle.length > 100 || profileUrl.length > 500) fail("Account handle or profile URL is too long.");
-        if (profileUrl && !/^https:\/\//i.test(profileUrl)) fail("Profile URLs must use HTTPS.");
-        if (!statuses.includes(status)) fail("Invalid social account status.");
-        normalized[platform] = { handle, profileUrl, status };
-      }
-      const path = "users/" + user.uid + "/private/socialSetup";
-      const old = await getDoc(env, path).catch(error => { if ((error as any)?.status === 404) return null; throw error; });
-      const fields: Json = { profiles: normalized, updatedAt: { __timestamp: new Date().toISOString() } };
-      if (old) await patchDoc(env, path, fields, old.updateTime); else await createDoc(env, path, fields);
-      return response({ saved: true, profiles: normalized }, 200, origin);
     }
     if (url.pathname === "/api/social/credentials") {
       const allowed = ["facebookPageToken", "facebookPageId", "instagramId", "twitterToken"];
