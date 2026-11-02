@@ -56,7 +56,7 @@ class _HomeContentState extends State<_HomeContent> {
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),
         destinations: [
-          NavigationDestination(icon: const Icon(Icons.dashboard_outlined), selectedIcon: const Icon(Icons.dashboard), label: 'Home'),
+          const NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Home'),
           NavigationDestination(icon: const Icon(Icons.fact_check_outlined), selectedIcon: const Icon(Icons.fact_check), label: strings.approvalQueue),
         ],
       ),
@@ -76,9 +76,10 @@ class _Dashboard extends StatelessWidget {
     final name = (profile['sarpanchName'] as String?) ?? '';
     final panchayat = (profile['panchayatName'] as String?) ?? '';
     final language = (profile['primaryLanguage'] as String?) ?? 'Hindi';
+    final imageUrl = (profile['imageUrl'] as String?) ?? '';
     return ListView(padding: const EdgeInsets.all(20), children: [
       Card(child: Padding(padding: const EdgeInsets.all(20), child: Row(children: [
-        CircleAvatar(radius: 32, foregroundImage: (profile['imageUrl'] as String?) ?? ''.isNotEmpty ? NetworkImage((profile['imageUrl'] as String?) ?? '') : null, child: (profile['imageUrl'] as String?) ?? ''.isEmpty ? const Icon(Icons.person, size: 30) : null),
+        CircleAvatar(radius: 32, foregroundImage: imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null, child: imageUrl.isEmpty ? const Icon(Icons.person, size: 30) : null),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), Text(panchayat), Text(language, style: Theme.of(context).textTheme.bodySmall)])),
       ]))),
