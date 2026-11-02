@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import '../profile/profile_setup_screen.dart';
 import 'approval_queue_screen.dart';
+import 'failed_posts_screen.dart';
 import 'post_composer_screen.dart';
 import '../profile/data/profile_repository.dart';
 import '../settings/appearance_settings_screen.dart';
@@ -87,7 +88,7 @@ class _HomeContentState extends State<_HomeContent> {
                 ),
               ),
             )
-          : const ApprovalQueueScreen(),
+          : _index == 1 ? const ApprovalQueueScreen() : const FailedPostsScreen(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),
@@ -101,6 +102,11 @@ class _HomeContentState extends State<_HomeContent> {
             icon: const Icon(Icons.fact_check_outlined),
             selectedIcon: const Icon(Icons.fact_check),
             label: strings.approvalQueue,
+          ),
+          const NavigationDestination(
+            icon: Icon(Icons.error_outline),
+            selectedIcon: Icon(Icons.error),
+            label: 'Failed',
           ),
         ],
       ),
