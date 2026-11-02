@@ -29,9 +29,14 @@ function b64url(bytes: Uint8Array): string {
   let binary = ""; for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
 }
-function pemBytes(pem: string): Uint8Array {
-  const body = pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\s/g, "");
-  return Uint8Array.from(atob(body), c => c.charCodeAt(0));
+function arrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(copy).set(bytes);
+  return copy;
+}
+function pemBytes(pem: string): ArrayBuffer {
+  const body = pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\\s/g, "");
+  return arrayBuffer(Uint8Array.from(atob(body), c => c.charCodeAt(0)));
 }
 async function googleAccessToken(env: Env): Promise<string> {
   if (cachedAccessToken && cachedAccessToken.expiresAt > Date.now() + 60_000) return cachedAccessToken.token;
