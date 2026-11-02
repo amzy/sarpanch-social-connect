@@ -5,10 +5,10 @@ Approval-first social publishing for Gram Panchayats. Flutter + Firebase Spark +
 ## Architecture
 
 - Flutter: Android, iOS and GitHub Pages web app.
-- Firebase Spark: Phone Authentication, Firestore and Storage.
-- Cloudflare Workers Free: one TypeScript HTTPS API for Gemini, authorization, captions, transliteration and social publishing.
+- Firebase Spark: Phone Authentication and Firestore.
+- Cloudflare Workers Free: one TypeScript HTTPS API for Gemini, authorization, captions, transliteration, media uploads and social publishing. Cloudflare R2 stores post visuals.
 - Gemini API: captions and Hindi transliteration. The key stays in Worker secrets.
-- No Firebase Cloud Functions, no Blaze upgrade, no D1, no Queues and no Cloud KMS.
+- No Firebase Cloud Functions, no Blaze upgrade, no Firebase Storage dependency, no D1, no Queues and no Cloud KMS.
 
 The Worker verifies Firebase ID tokens through Firebase Authentication accounts:lookup. Privileged Firestore writes use a dedicated Google service account with the Cloud Datastore User role. Store its JSON key only as a Worker secret. Firestore rules deny client access to private social credentials and admin records.
 
@@ -18,7 +18,7 @@ All endpoints except GET /health require Authorization: Bearer <Firebase ID toke
 
 | Endpoint | Purpose |
 |---|---|
-| POST /api/posts/generate | Generate three captions for an owned pending_ai post |
+| POST /api/posts/generate | Generate three captions for an owned pending_ai post |\n| POST /api/media/upload | Authenticated owner-scoped upload to Cloudflare R2 |
 | POST /api/posts/more-options | Generate three new captions; maximum five refreshes |
 | POST /api/profile/transliterate | Transliterate an Indian name into Devanagari |
 | POST /api/posts/approve-and-publish | Save edited caption, approve and publish |
@@ -33,13 +33,13 @@ AI captions support English, Hindi, Marathi, Telugu, Tamil and Gujarati. Free us
 
 ### Firebase Spark
 
-Keep the project on Spark. Enable Phone Authentication, Firestore and Storage. Do not deploy Functions.
+Keep the project on Spark. Enable Phone Authentication and Firestore. Do not initialize Firebase Storage and do not deploy Functions.
 
 Create a dedicated service account in the existing Google Cloud project, for example sarpanch-worker-firestore. Grant only Cloud Datastore User (roles/datastore.user). Create a JSON key. The Worker uses it for Firestore REST operations. Do not grant Owner or Editor.
 
 Copy the Firebase Web API key from lib/firebase_options.dart (web apiKey).
 
-### Cloudflare Worker Free
+### Cloudflare Worker Free\n\nCreate an R2 bucket named `sarpanch-social-connect-media` in the Cloudflare dashboard (R2 free tier quotas apply). The Worker serves saved images through its `/media/` route; no public bucket access is required.
 
 From worker/:
 
@@ -65,7 +65,7 @@ Set META_GRAPH_VERSION in worker/wrangler.toml to a Graph API version supported 
 Deploy only the products still in use:
 
 ```bash
-firebase deploy --only firestore:rules,storage
+firebase deploy --only firestore:rules
 ```
 
 Do not deploy Functions. Confirm Firebase Console remains on Spark.

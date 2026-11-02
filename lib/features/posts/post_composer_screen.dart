@@ -182,15 +182,26 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
           file: _after!,
         );
       }
-      var imageUrl = '';
-      if (_before != null || _after != null) {
-        final bytes = await _captureCanvas();
-        imageUrl = await _uploads.uploadBytes(
-          uid: user.uid,
-          path: 'users/${user.uid}/posts/$postId.png',
-          bytes: bytes,
-        );
+      // Every post must have a finished visual, even when no source photos are supplied.
+      // Ask Gemini to select a suitable frame unless the user has already chosen one.
+      if (_frameStyle == 'classic') {
+        try {
+          _frameStyle = await BackendApiService().suggestPostFrame(
+            postType: _type,
+            notes: _notes.text.trim(),
+          );
+        } catch (_) {
+          // Keep the safe Classic template when AI frame suggestion is unavailable.
+        }
       }
+      if (mounted) setState(() {});
+      await WidgetsBinding.instance.endOfFrame;
+      final posterBytes = await _captureCanvas();
+      final imageUrl = await _uploads.uploadBytes(
+        uid: user.uid,
+        path: 'users/${user.uid}/posts/$postId.png',
+        bytes: posterBytes,
+      );
       await PostRepository().createPost({
         'postId': postId,
         'uid': user.uid,
