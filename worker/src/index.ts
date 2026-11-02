@@ -69,9 +69,18 @@ async function verifyUser(request: Request, env: Env): Promise<{ uid: string; ph
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ idToken: authorization.slice(7) }),
   });
-  const result = await lookup.json() as { users?: Array<{ localId?: string; phoneNumber?: string }> };
+  const result = await lookup.json() as {
+    users?: Array<{ localId?: string; phoneNumber?: string }>;
+    error?: { message?: string; status?: string; errors?: Array<{ message?: string; reason?: string }> };
+  };
   const user = result.users?.[0];
-  if (!lookup.ok || !user?.localId) fail("Your session is invalid or expired. Sign in again.", 401);
+  if (!lookup.ok || !user?.localId) {
+    const reason = result.error?.message ??
+      result.error?.errors?.map(item => item.reason ?? item.message).filter(Boolean).join(", ") ??
+      "TOKEN_VERIFICATION_FAILED";
+    // Keep the Firebase response code, but never return the submitted token or API key.
+    fail(`Firebase sign-in verification failed (${reason}). Refresh the session and try again. If this persists, verify the Worker's FIREBASE_WEB_API_KEY matches the web app's Firebase project.`, 401);
+  }
   return { uid: user.localId, phoneNumber: user.phoneNumber };
 }
 function decodeValue(value: any): any {

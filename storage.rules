@@ -4,8 +4,8 @@ service firebase.storage {
     function signedIn() { return request.auth != null; }
     function owns(uid) { return signedIn() && request.auth.uid == uid; }
     function validImage() {
-      return request.resource.size < 1 * 1024 * 1024
-        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+      return request.resource.size < 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp|gif|heic)');
     }
     match /users/{uid}/profile/{fileName} {
       allow read: if owns(uid);

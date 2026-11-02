@@ -39,6 +39,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   XFile? _sealImage;
   String _language = 'Hindi';
   bool _saving = false;
+  String _saveStage = 'Saving profile';
   bool _transliteratingSarpanch = false;
   bool _transliteratingPanchayat = false;
   String? _error;
@@ -116,28 +117,40 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      setState(
+          () => _error = 'Your session has expired. Please sign in again.');
+      return;
+    }
     setState(() {
       _saving = true;
+      _saveStage = 'Saving profile';
       _error = null;
     });
     try {
       String imageUrl = (widget.initialProfile?['imageUrl'] as String?) ?? '';
       String sealUrl = (widget.initialProfile?['sealUrl'] as String?) ?? '';
       if (_profileImage != null) {
-        imageUrl = await _uploads.uploadFile(
-          uid: user.uid,
-          path: 'users/${user.uid}/profile/profile.jpg',
-          file: _profileImage!,
-        );
+        setState(() => _saveStage = 'Uploading profile picture…');
+        imageUrl = await _uploads
+            .uploadFile(
+              uid: user.uid,
+              path: 'users/${user.uid}/profile/profile.jpg',
+              file: _profileImage!,
+            )
+            .timeout(const Duration(seconds: 90));
       }
       if (_sealImage != null) {
-        sealUrl = await _uploads.uploadFile(
-          uid: user.uid,
-          path: 'users/${user.uid}/profile/seal.jpg',
-          file: _sealImage!,
-        );
+        setState(() => _saveStage = 'Uploading Panchayat seal…');
+        sealUrl = await _uploads
+            .uploadFile(
+              uid: user.uid,
+              path: 'users/${user.uid}/profile/seal.jpg',
+              file: _sealImage!,
+            )
+            .timeout(const Duration(seconds: 90));
       }
+      setState(() => _saveStage = 'Saving profile details…');
       await ProfileRepository().completeProfile(
         uid: user.uid,
         profile: {
@@ -152,9 +165,15 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           'sealUrl': sealUrl,
           'profileComplete': true,
         },
-      );
+      ).timeout(const Duration(seconds: 30));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Panchayat profile saved successfully.')),
+        );
+      }
     } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+      if (mounted) setState(() => _error = '$_saveStage failed: $error');
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -303,7 +322,18 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   minimumSize: const Size.fromHeight(54),
                 ),
                 child: _saving
-                    ? const CircularProgressIndicator()
+                    ? Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: 12),
+                          Flexible(child: Text(_saveStage)),
+                        ],
+                      )
                     : Text(strings.saveProfile),
               ),
             ],
