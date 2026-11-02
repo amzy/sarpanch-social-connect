@@ -34,7 +34,7 @@ export const generatePostCaption = onDocumentCreated({
   }
   const userSnapshot = await db.doc(`users/${uid}`).get();
   const user = userSnapshot.data() ?? {};
-  const language = String(user.primaryLanguage ?? 'English');
+  const language = String(post.contentLanguage ?? user.primaryLanguage ?? 'Hindi');
   if (!languages.has(language)) {
     await snapshot.ref.update({ status: 'failed', failureCode: 'UNSUPPORTED_LANGUAGE' });
     return;
