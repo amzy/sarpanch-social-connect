@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'dart:convert';\nimport 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
@@ -54,6 +54,25 @@ class BackendApiService {
           'Backend request failed (${result.statusCode}).');
     }
     return data;
+  }
+
+  Future<String> uploadMedia({
+    required String path,
+    required Uint8List bytes,
+    required String contentType,
+  }) async {
+    if (bytes.isEmpty) throw StateError('The image is empty.');
+    if (bytes.length > 8 * 1024 * 1024) {
+      throw StateError('Images must be smaller than 8 MB.');
+    }
+    final data = await _post('/api/media/upload', {
+      'path': path,
+      'contentType': contentType,
+      'data': base64Encode(bytes),
+    });
+    final url = data['url']?.toString() ?? '';
+    if (url.isEmpty) throw StateError('The media service did not return an image URL.');
+    return url;
   }
 
   Future<List<String>> generatePost(String postId) async {
