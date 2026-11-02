@@ -26,7 +26,7 @@ class BackendApiService {
     }
     final user = _auth.currentUser;
     if (user == null) throw StateError('Please sign in again.');
-    final token = await user.getIdToken();
+    final token = await user.getIdToken(true);
     if (token == null || token.isEmpty) {
       throw StateError(
           'Your sign-in session has expired. Please sign in again.');
