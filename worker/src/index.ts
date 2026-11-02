@@ -199,23 +199,23 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
   const usage = (user.data.usage ?? {}) as Json;
   const aiUsage = (usage.aiGenerations ?? {}) as Json;
   const month = monthKey();
-  if (plan !== "premium" && Number(aiUsage[month] ?? 0) >= 3) fail("FREE_MONTHLY_LIMIT_REACHED", 429);
+  if (plan !== "premium" && Number(aiUsage[month] ?? 0) >= 3) {
+    await patchDoc(env, path, { status: "failed", failureCode: "FREE_MONTHLY_LIMIT_REACHED" }, current.updateTime);
+    fail("FREE_MONTHLY_LIMIT_REACHED", 429);
+  }
   if (refresh) {
     await patchDoc(env, path, { status: "generating_more" }, current.updateTime);
   } else {
     await patchDoc(env, path, { status: "processing_ai" }, current.updateTime);
   }
   try {
+    await patchDoc(env, `users/${uid}`, {
+      usage: { ...usage, aiGenerations: { ...aiUsage, [month]: Number(aiUsage[month] ?? 0) + 1 }, lastAiGenerationAt: { __timestamp: new Date().toISOString() } },
+    }, user.updateTime);
     const text = await gemini(env, captionPrompt(current.data, user.data, language, refresh));
     const parsed = jsonFromModel(text) as { captions?: unknown };
     const captions = Array.isArray(parsed.captions) ? parsed.captions.map(String).map(s => s.trim()).filter(Boolean).slice(0, 3) : [];
     if (captions.length !== 3) throw new Error("Gemini did not return exactly three caption options.");
-    const refreshedUser = await getDoc(env, `users/${uid}`);
-    const refreshedUsage = (refreshedUser.data.usage ?? {}) as Json;
-    const refreshedAiUsage = (refreshedUsage.aiGenerations ?? {}) as Json;
-    await patchDoc(env, `users/${uid}`, {
-      usage: { ...refreshedUsage, aiGenerations: { ...refreshedAiUsage, [month]: Number(refreshedAiUsage[month] ?? 0) + 1 }, lastAiGenerationAt: { __timestamp: new Date().toISOString() } },
-    }, refreshedUser.updateTime);
     const latestPost = await getDoc(env, path);
     const refreshCount = Number(latestPost.data.captionRefreshCount ?? 0) + (refresh ? 1 : 0);
     await patchDoc(env, path, {
@@ -379,7 +379,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
       const postId = String(body.postId ?? "");
       const post = await getDoc(env, `posts_queue/${postId}`);
       if (post.data.uid !== user.uid) fail("Post not found.", 404);
-      if (String(post.data.failureCode ?? "").startsWith("AI_")) {
+      if (["AI_GENERATION_FAILED", "FREE_MONTHLY_LIMIT_REACHED", "BILLING_INACTIVE", "UNSUPPORTED_LANGUAGE"].includes(String(post.data.failureCode ?? ""))) {
         await patchDoc(env, `posts_queue/${postId}`, { status: "pending_ai", failureCode: null, failureMessage: null }, post.updateTime);
         return response(await generateForPost(env, user.uid, postId, false), 200, origin);
       }
