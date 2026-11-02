@@ -52,7 +52,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
           await FirebaseAuth.instance.signInWithCredential(credential);
           await _bootstrapDevelopmentAdmin();
         },
-        verificationFailed: (exception) => setState(() => _error = exception.message ?? 'Phone verification failed.'),
+        verificationFailed: (exception) => setState(() => _error = '${exception.code}: ${exception.message ?? 'Phone verification failed.'}'),
         codeSent: (verificationId, _) => setState(() => _verificationId = verificationId),
         codeAutoRetrievalTimeout: (verificationId) => setState(() => _verificationId = verificationId),
       );
