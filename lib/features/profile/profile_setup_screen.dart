@@ -50,8 +50,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       if (_sealImage != null) {
         sealUrl = await _uploads.uploadFile(uid: user.uid, path: 'users/${user.uid}/profile/seal.jpg', file: _sealImage!);
       }
-      await ProfileRepository().createProfile({
-        'uid': user.uid,
+      await ProfileRepository().completeProfile(uid: user.uid, profile: {
         'sarpanchName': _sarpanch.text.trim(),
         'panchayatName': _panchayat.text.trim(),
         'district': _district.text.trim(),
@@ -60,7 +59,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         'imageUrl': imageUrl,
         'sealUrl': sealUrl,
         'plan': 'free',
-        'billingStatus': 'active',
+        'profileComplete': true,
       });
     } catch (error) {
       setState(() => _error = error.toString());
