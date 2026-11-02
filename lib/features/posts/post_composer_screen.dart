@@ -123,6 +123,26 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
     return data.buffer.asUint8List();
   }
 
+  Future<void> _suggestFrame() async {
+    if (_notes.text.trim().isEmpty) {
+      setState(() => _error = 'Add post details before asking AI to suggest a frame.');
+      return;
+    }
+    setState(() { _saving = true; _error = null; });
+    try {
+      final suggestion = await BackendApiService().suggestPostFrame(
+        postType: _type,
+        notes: _notes.text.trim(),
+      );
+      if (!mounted) return;
+      setState(() => _frameStyle = suggestion);
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Could not suggest a frame: $error');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   Future<void> _submit() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -257,6 +277,29 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
               alignLabelWithHint: true,
             ),
           ),
+          const SizedBox(height: 14),
+          Text('Poster frame', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _frameStyle,
+            decoration: const InputDecoration(labelText: 'Choose a frame theme'),
+            items: const [
+              DropdownMenuItem(value: 'classic', child: Text('Classic official')),
+              DropdownMenuItem(value: 'celebration', child: Text('Festival celebration')),
+              DropdownMenuItem(value: 'development', child: Text('Development spotlight')),
+              DropdownMenuItem(value: 'announcement', child: Text('Public announcement')),
+              DropdownMenuItem(value: 'minimal', child: Text('Clean minimal')),
+              DropdownMenuItem(value: 'tricolor', child: Text('India tricolour')),
+            ],
+            onChanged: _saving ? null : (value) {
+              if (value != null) setState(() => _frameStyle = value);
+            },
+          ),
+          OutlinedButton.icon(
+            onPressed: _saving ? null : _suggestFrame,
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Suggest frame with AI'),
+          ),
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: _saving ? null : () => _choose(true),
@@ -320,6 +363,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
                   sealUrl: (widget.profile['sealUrl'] as String?) ?? '',
                   notes: _notes.text,
                   stacked: _stacked,
+                  frameStyle: _frameStyle,
                 ),
               ),
             ),
