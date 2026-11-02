@@ -37,7 +37,7 @@ class ImageUploadService {
 
   String _key(String uid, String path) {
     final normalized = path
-        .replaceAll('\\\\', '/')
+        .replaceAll('\\', '/')
         .split('/')
         .where((part) => part.isNotEmpty)
         .toList();
