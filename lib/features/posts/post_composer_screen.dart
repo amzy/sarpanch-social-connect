@@ -282,31 +282,34 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          Text('Poster frame', style: Theme.of(context).textTheme.titleMedium),
+          Text('Choose poster frame', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            initialValue: _frameStyle,
-            decoration:
-                const InputDecoration(labelText: 'Choose a frame theme'),
-            items: const [
-              DropdownMenuItem(
-                  value: 'classic', child: Text('Classic official')),
-              DropdownMenuItem(
-                  value: 'celebration', child: Text('Festival celebration')),
-              DropdownMenuItem(
-                  value: 'development', child: Text('Development spotlight')),
-              DropdownMenuItem(
-                  value: 'announcement', child: Text('Public announcement')),
-              DropdownMenuItem(value: 'minimal', child: Text('Clean minimal')),
-              DropdownMenuItem(
-                  value: 'tricolor', child: Text('India tricolour')),
-            ],
-            onChanged: _saving
-                ? null
-                : (value) {
-                    if (value != null) setState(() => _frameStyle = value);
-                  },
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: const [
+              ('classic', 'Classic'),
+              ('celebration', 'Celebration'),
+              ('development', 'Development'),
+              ('announcement', 'Announcement'),
+              ('minimal', 'Minimal'),
+              ('tricolor', 'Tricolour'),
+            ].map((option) => ChoiceChip(
+                  label: Text(option.$2),
+                  selected: _frameStyle == option.$1,
+                  onSelected: _saving
+                      ? null
+                      : (selected) {
+                          if (selected) setState(() => _frameStyle = option.$1);
+                        },
+                )).toList(),
           ),
+          const SizedBox(height: 6),
+          Text(
+            'Selected: ${_frameStyle == 'tricolor' ? 'India tricolour' : _frameStyle[0].toUpperCase() + _frameStyle.substring(1)}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          OutlinedButton.icon(
           OutlinedButton.icon(
             onPressed: _saving ? null : _suggestFrame,
             icon: const Icon(Icons.auto_awesome),
