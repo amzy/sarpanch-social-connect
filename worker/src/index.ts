@@ -194,7 +194,8 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
   const usage = (user.data.usage ?? {}) as Json;
   const aiUsage = (usage.aiGenerations ?? {}) as Json;
   const month = monthKey();
-  if (!refresh && plan !== "premium" && Number(aiUsage[month] ?? 0) >= 3) {
+  const alreadyClaimed = current.data.aiUsageClaimed === true;
+  if (!refresh && !alreadyClaimed && plan !== "premium" && Number(aiUsage[month] ?? 0) >= 3) {
     await patchDoc(env, path, { status: "failed", failureCode: "FREE_MONTHLY_LIMIT_REACHED" }, current.updateTime);
     fail("FREE_MONTHLY_LIMIT_REACHED", 429);
   }
@@ -204,10 +205,12 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
     await patchDoc(env, path, { status: "processing_ai" }, current.updateTime);
   }
   try {
-    if (!refresh) {
+    if (!refresh && !alreadyClaimed) {
       await patchDoc(env, `users/${uid}`, {
         usage: { ...usage, aiGenerations: { ...aiUsage, [month]: Number(aiUsage[month] ?? 0) + 1 }, lastAiGenerationAt: { __timestamp: new Date().toISOString() } },
       }, user.updateTime);
+      const claimedPost = await getDoc(env, path);
+      await patchDoc(env, path, { aiUsageClaimed: true, aiUsageMonth: month }, claimedPost.updateTime);
     }
     const text = await gemini(env, captionPrompt(current.data, user.data, language, refresh));
     const parsed = jsonFromModel(text) as { captions?: unknown };
@@ -251,7 +254,10 @@ async function readSocial(env: Env, uid: string): Promise<Json> {
     for (const key of ["facebookPageToken", "twitterToken"]) if (typeof doc.data[key] === "string") result[key] = await decryptSecret(env, String(doc.data[key]));
     for (const key of ["facebookPageId", "instagramId"]) if (typeof doc.data[key] === "string") result[key] = doc.data[key];
     return result;
-  } catch { return {}; }
+  } catch (error) {
+    if ((error as any)?.status === 404) return {};
+    throw error;
+  }
 }
 async function graphPost(url: string, body: URLSearchParams): Promise<string> {
   const result = await fetch(url, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body });
