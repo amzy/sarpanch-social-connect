@@ -125,10 +125,14 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
 
   Future<void> _suggestFrame() async {
     if (_notes.text.trim().isEmpty) {
-      setState(() => _error = 'Add post details before asking AI to suggest a frame.');
+      setState(() =>
+          _error = 'Add post details before asking AI to suggest a frame.');
       return;
     }
-    setState(() { _saving = true; _error = null; });
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     try {
       final suggestion = await BackendApiService().suggestPostFrame(
         postType: _type,
@@ -282,18 +286,26 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             initialValue: _frameStyle,
-            decoration: const InputDecoration(labelText: 'Choose a frame theme'),
+            decoration:
+                const InputDecoration(labelText: 'Choose a frame theme'),
             items: const [
-              DropdownMenuItem(value: 'classic', child: Text('Classic official')),
-              DropdownMenuItem(value: 'celebration', child: Text('Festival celebration')),
-              DropdownMenuItem(value: 'development', child: Text('Development spotlight')),
-              DropdownMenuItem(value: 'announcement', child: Text('Public announcement')),
+              DropdownMenuItem(
+                  value: 'classic', child: Text('Classic official')),
+              DropdownMenuItem(
+                  value: 'celebration', child: Text('Festival celebration')),
+              DropdownMenuItem(
+                  value: 'development', child: Text('Development spotlight')),
+              DropdownMenuItem(
+                  value: 'announcement', child: Text('Public announcement')),
               DropdownMenuItem(value: 'minimal', child: Text('Clean minimal')),
-              DropdownMenuItem(value: 'tricolor', child: Text('India tricolour')),
+              DropdownMenuItem(
+                  value: 'tricolor', child: Text('India tricolour')),
             ],
-            onChanged: _saving ? null : (value) {
-              if (value != null) setState(() => _frameStyle = value);
-            },
+            onChanged: _saving
+                ? null
+                : (value) {
+                    if (value != null) setState(() => _frameStyle = value);
+                  },
           ),
           OutlinedButton.icon(
             onPressed: _saving ? null : _suggestFrame,

@@ -50,9 +50,14 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                               child: SizedBox(
                                 height: 10,
                                 child: Row(children: [
-                                  Expanded(child: ColoredBox(color: Color(0xFFFF9933))),
-                                  Expanded(child: ColoredBox(color: Colors.white)),
-                                  Expanded(child: ColoredBox(color: Color(0xFF138808))),
+                                  Expanded(
+                                      child:
+                                          ColoredBox(color: Color(0xFFFF9933))),
+                                  Expanded(
+                                      child: ColoredBox(color: Colors.white)),
+                                  Expanded(
+                                      child:
+                                          ColoredBox(color: Color(0xFF138808))),
                                 ]),
                               ),
                             )

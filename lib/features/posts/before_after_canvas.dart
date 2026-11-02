@@ -109,7 +109,8 @@ class BeforeAfterCanvas extends StatelessWidget {
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: frameColor, width: frameStyle == 'minimal' ? 2 : 5),
+          border: Border.all(
+              color: frameColor, width: frameStyle == 'minimal' ? 2 : 5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -158,9 +159,18 @@ class BeforeAfterCanvas extends StatelessWidget {
             const SizedBox(height: 18),
             if (frameStyle == 'tricolor')
               const Row(children: [
-                Expanded(child: SizedBox(height: 7, child: ColoredBox(color: Color(0xFFFF9933)))),
-                Expanded(child: SizedBox(height: 7, child: ColoredBox(color: Color(0xFFFFFFFF)))),
-                Expanded(child: SizedBox(height: 7, child: ColoredBox(color: Color(0xFF138808)))),
+                Expanded(
+                    child: SizedBox(
+                        height: 7,
+                        child: ColoredBox(color: Color(0xFFFF9933)))),
+                Expanded(
+                    child: SizedBox(
+                        height: 7,
+                        child: ColoredBox(color: Color(0xFFFFFFFF)))),
+                Expanded(
+                    child: SizedBox(
+                        height: 7,
+                        child: ColoredBox(color: Color(0xFF138808)))),
               ])
             else
               Container(height: 4, color: frameColor),
