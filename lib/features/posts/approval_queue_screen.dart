@@ -10,7 +10,6 @@ import 'data/post_repository.dart';
 class ApprovalQueueScreen extends StatelessWidget {
   const ApprovalQueueScreen({super.key});
 
-
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context)!;
