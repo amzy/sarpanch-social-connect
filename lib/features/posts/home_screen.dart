@@ -9,6 +9,7 @@ import 'failed_posts_screen.dart';
 import 'post_composer_screen.dart';
 import '../profile/data/profile_repository.dart';
 import '../settings/appearance_settings_screen.dart';
+import '../settings/social_accounts_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -70,6 +71,13 @@ class _HomeContentState extends State<_HomeContent> {
               MaterialPageRoute(
                 builder: (_) => const AppearanceSettingsScreen(),
               ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Social accounts',
+            icon: const Icon(Icons.link),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SocialAccountsScreen()),
             ),
           ),
           IconButton(
