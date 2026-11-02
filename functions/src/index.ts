@@ -181,6 +181,32 @@ export const dispatchApprovedPost = onDocumentUpdated({
 
 export const saveSocialCredentials = saveSocialCredentialsHandler;
 
+export const transliterateNameToHindi = onCall({
+  region: FUNCTION_REGION,
+  secrets: [GEMINI_API_KEY],
+}, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.');
+  const text = String(request.data?.text ?? '').trim();
+  if (!text || text.length > 120) {
+    throw new HttpsError('invalid-argument', 'Enter a name up to 120 characters.');
+  }
+  const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY.value() });
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: [
+      'Transliterate this Indian proper name from English letters into Devanagari Hindi script.',
+      'Do phonetic transliteration only; do not translate, explain, add titles, or invent details.',
+      'Return only the Devanagari name, with no quotes or commentary.',
+      'Name: ' + text,
+    ].join('\\n'),
+    config: { temperature: 0.1, maxOutputTokens: 100 },
+  });
+  const hindi = response.text?.trim().replace(/^["']|["']$/g, '') ?? '';
+  if (!hindi) throw new HttpsError('internal', 'Hindi transliteration returned an empty result.');
+  return { hindi };
+});
+
+
 export const generateMorePostCaptions = onCall({ region: FUNCTION_REGION, secrets: [GEMINI_API_KEY] }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.');
   const postId = String(request.data?.postId ?? '');
