@@ -370,6 +370,12 @@ async function handle(request: Request, env: Env): Promise<Response> {
       const postId = String(body.postId ?? "");
       const post = await getDoc(env, `posts_queue/${postId}`);
       if (post.data.uid !== user.uid) fail("Post not found.", 404);
+      if (post.data.status === "pending_approval") {
+        return response({ status: "pending_approval", captions: post.data.aiCaptions ?? [] }, 200, origin);
+      }
+      if (post.data.status === "pending_ai") {
+        return response(await generateForPost(env, user.uid, postId, false), 200, origin);
+      }
       if (["AI_GENERATION_FAILED", "FREE_MONTHLY_LIMIT_REACHED", "BILLING_INACTIVE", "UNSUPPORTED_LANGUAGE"].includes(String(post.data.failureCode ?? ""))) {
         await patchDoc(env, `posts_queue/${postId}`, { status: "pending_ai", failureCode: null, failureMessage: null }, post.updateTime);
         return response(await generateForPost(env, user.uid, postId, false), 200, origin);
