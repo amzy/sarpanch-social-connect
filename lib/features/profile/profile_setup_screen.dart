@@ -117,9 +117,13 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      setState(() => _error = 'Your session has expired. Please sign in again.');
+      return;
+    }
     setState(() {
       _saving = true;
+      _saveStage = 'Saving profile';
       _error = null;
     });
     try {
@@ -157,6 +161,11 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           'profileComplete': true,
         },
       ).timeout(const Duration(seconds: 30));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Panchayat profile saved successfully.')),
+        );
+      }
     } catch (error) {
       if (mounted) setState(() => _error = '$_saveStage failed: $error');
     } finally {
