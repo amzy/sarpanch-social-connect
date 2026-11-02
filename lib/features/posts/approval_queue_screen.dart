@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -48,6 +49,7 @@ class _ApprovalCard extends StatefulWidget {
 class _ApprovalCardState extends State<_ApprovalCard> {
   late final TextEditingController _caption;
   bool _busy = false;
+  bool _refreshing = false;
   int _selectedCaption = 0;
   String? _error;
 
@@ -63,6 +65,29 @@ class _ApprovalCardState extends State<_ApprovalCard> {
   void dispose() {
     _caption.dispose();
     super.dispose();
+  }
+
+  Future<void> _moreOptions() async {
+    setState(() {
+      _refreshing = true;
+      _error = null;
+    });
+    try {
+      final result = await FirebaseFunctions.instance
+          .httpsCallable('generateMorePostCaptions')
+          .call({'postId': widget.post.id});
+      final data = Map<String, dynamic>.from(result.data as Map);
+      final captions = (data['captions'] as List).map((value) => value.toString()).toList();
+      if (!mounted || captions.isEmpty) return;
+      setState(() {
+        _selectedCaption = 0;
+        _caption.text = captions.first;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Could not generate more options: $error');
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
   }
 
   Future<void> _update(String status) async {
@@ -147,6 +172,13 @@ class _ApprovalCardState extends State<_ApprovalCard> {
                 );
               })),
             ],
+            OutlinedButton.icon(
+              onPressed: (_busy || _refreshing) ? null : _moreOptions,
+              icon: _refreshing
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.refresh),
+              label: Text(_refreshing ? 'Generating…' : 'More options'),
+            ),
             TextField(
               controller: _caption,
               minLines: 3,
