@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
@@ -10,6 +10,11 @@ class ImageUploadService {
   static const int maxBytes = 1024 * 1024;
 
   Future<XFile> compress(XFile input) async {
+    if (kIsWeb) {
+      // Browser-picked files are already browser-managed. Do not request a
+      // native temporary directory or pass a blob URL to a native compressor.
+      return input;
+    }
     final directory = await getTemporaryDirectory();
     final outputPath = '${directory.path}/${const Uuid().v4()}.jpg';
     XFile? compressed;
@@ -39,13 +44,39 @@ class ImageUploadService {
     required String path,
     required XFile file,
   }) async {
-    final compressed = await compress(file);
     final ref = FirebaseStorage.instance.ref(path);
-    await ref.putFile(
-      File(compressed.path),
-      SettableMetadata(contentType: 'image/jpeg'),
-    );
+    if (kIsWeb) {
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) throw Exception('The selected image is empty.');
+      await ref.putData(
+        bytes,
+        SettableMetadata(contentType: _contentType(file.name)),
+      );
+    } else {
+      final compressed = await compress(file);
+      await ref.putFile(
+        File(compressed.path),
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+    }
     return ref.getDownloadURL();
+  }
+
+  String _contentType(String name) {
+    final extension = name.toLowerCase().split('.').last;
+    switch (extension) {
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'gif':
+        return 'image/gif';
+      case 'heic':
+      case 'heif':
+        return 'image/heic';
+      default:
+        return 'image/jpeg';
+    }
   }
 
   Future<String> uploadBytes({
@@ -53,6 +84,13 @@ class ImageUploadService {
     required String path,
     required Uint8List bytes,
   }) async {
+    if (bytes.isEmpty) throw Exception('The generated poster image is empty.');
+    final ref = FirebaseStorage.instance.ref(path);
+    if (kIsWeb) {
+      await ref.putData(bytes, SettableMetadata(contentType: 'image/png'));
+      return ref.getDownloadURL();
+    }
+
     Uint8List optimized = bytes;
     var contentType = 'image/png';
     var uploadPath = path;
@@ -87,8 +125,11 @@ class ImageUploadService {
     if (optimized.length >= maxBytes) {
       throw Exception('Composited image could not be compressed below 1 MB.');
     }
-    final ref = FirebaseStorage.instance.ref(uploadPath);
-    await ref.putData(optimized, SettableMetadata(contentType: contentType));
-    return ref.getDownloadURL();
+    final uploadRef = FirebaseStorage.instance.ref(uploadPath);
+    await uploadRef.putData(
+      optimized,
+      SettableMetadata(contentType: contentType),
+    );
+    return uploadRef.getDownloadURL();
   }
 }

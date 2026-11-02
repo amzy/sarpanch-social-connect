@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -29,8 +28,10 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   final _picker = ImagePicker();
   final _uploads = ImageUploadService();
   final _retryQueue = RetryQueueService();
-  File? _before;
-  File? _after;
+  XFile? _before;
+  XFile? _after;
+  Uint8List? _beforeBytes;
+  Uint8List? _afterBytes;
   String _type = 'development';
   late String _contentLanguage;
   bool _stacked = false;
@@ -84,12 +85,15 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
     if (source == null || !mounted) return;
     final file = await _picker.pickImage(source: source, imageQuality: 90);
     if (file == null || !mounted) return;
-    final compressed = await _uploads.compress(file);
+    final bytes = await file.readAsBytes();
+    if (bytes.isEmpty || !mounted) return;
     setState(() {
       if (before) {
-        _before = File(compressed.path);
+        _before = file;
+        _beforeBytes = bytes;
       } else {
-        _after = File(compressed.path);
+        _after = file;
+        _afterBytes = bytes;
       }
     });
   }
@@ -168,14 +172,14 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         beforeUrl = await _uploads.uploadFile(
           uid: user.uid,
           path: 'users/${user.uid}/posts/$postId-before.jpg',
-          file: XFile(_before!.path),
+          file: _before!,
         );
       }
       if (_after != null) {
         afterUrl = await _uploads.uploadFile(
           uid: user.uid,
           path: 'users/${user.uid}/posts/$postId-after.jpg',
-          file: XFile(_after!.path),
+          file: _after!,
         );
       }
       var imageUrl = '';
@@ -213,8 +217,6 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
           'postId': postId,
           'type': _type,
           'rawNotes': _notes.text.trim(),
-          'beforePath': _before?.path,
-          'afterPath': _after?.path,
           'error': error.toString(),
         });
       }
@@ -282,30 +284,61 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          Text('Poster frame', style: Theme.of(context).textTheme.titleMedium),
+          Text('Choose poster frame',
+              style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            initialValue: _frameStyle,
-            decoration:
-                const InputDecoration(labelText: 'Choose a frame theme'),
-            items: const [
-              DropdownMenuItem(
-                  value: 'classic', child: Text('Classic official')),
-              DropdownMenuItem(
-                  value: 'celebration', child: Text('Festival celebration')),
-              DropdownMenuItem(
-                  value: 'development', child: Text('Development spotlight')),
-              DropdownMenuItem(
-                  value: 'announcement', child: Text('Public announcement')),
-              DropdownMenuItem(value: 'minimal', child: Text('Clean minimal')),
-              DropdownMenuItem(
-                  value: 'tricolor', child: Text('India tricolour')),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              ChoiceChip(
+                label: const Text('Classic'),
+                selected: _frameStyle == 'classic',
+                onSelected: _saving
+                    ? null
+                    : (_) => setState(() => _frameStyle = 'classic'),
+              ),
+              ChoiceChip(
+                label: const Text('Celebration'),
+                selected: _frameStyle == 'celebration',
+                onSelected: _saving
+                    ? null
+                    : (_) => setState(() => _frameStyle = 'celebration'),
+              ),
+              ChoiceChip(
+                label: const Text('Development'),
+                selected: _frameStyle == 'development',
+                onSelected: _saving
+                    ? null
+                    : (_) => setState(() => _frameStyle = 'development'),
+              ),
+              ChoiceChip(
+                label: const Text('Announcement'),
+                selected: _frameStyle == 'announcement',
+                onSelected: _saving
+                    ? null
+                    : (_) => setState(() => _frameStyle = 'announcement'),
+              ),
+              ChoiceChip(
+                label: const Text('Minimal'),
+                selected: _frameStyle == 'minimal',
+                onSelected: _saving
+                    ? null
+                    : (_) => setState(() => _frameStyle = 'minimal'),
+              ),
+              ChoiceChip(
+                label: const Text('India tricolour'),
+                selected: _frameStyle == 'tricolor',
+                onSelected: _saving
+                    ? null
+                    : (_) => setState(() => _frameStyle = 'tricolor'),
+              ),
             ],
-            onChanged: _saving
-                ? null
-                : (value) {
-                    if (value != null) setState(() => _frameStyle = value);
-                  },
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Selected: ${_frameStyle == 'tricolor' ? 'India tricolour' : _frameStyle[0].toUpperCase() + _frameStyle.substring(1)}',
+            style: Theme.of(context).textTheme.bodySmall,
           ),
           OutlinedButton.icon(
             onPressed: _saving ? null : _suggestFrame,
@@ -324,7 +357,10 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () => setState(() => _before = null),
+                onPressed: () => setState(() {
+                  _before = null;
+                  _beforeBytes = null;
+                }),
                 child: const Text('Remove before photo'),
               ),
             ),
@@ -339,7 +375,10 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () => setState(() => _after = null),
+                onPressed: () => setState(() {
+                  _after = null;
+                  _afterBytes = null;
+                }),
                 child: const Text('Remove after photo'),
               ),
             ),
@@ -360,8 +399,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
               child: RepaintBoundary(
                 key: _canvasKey,
                 child: BeforeAfterCanvas(
-                  beforeFile: _before,
-                  afterFile: _after,
+                  beforeBytes: _beforeBytes,
+                  afterBytes: _afterBytes,
                   sarpanchName:
                       (widget.profile['sarpanchName'] as String?) ?? '',
                   panchayatName:
