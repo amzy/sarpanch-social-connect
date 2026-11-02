@@ -31,9 +31,23 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   File? _before;
   File? _after;
   String _type = 'development';
+  late String _contentLanguage;
   bool _stacked = false;
   bool _saving = false;
   String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    final configured = widget.profile['primaryLanguage'] as String?;
+    _contentLanguage = supportedContentLanguages.contains(configured)
+        ? configured!
+        : 'Hindi';
+  }
+
+  static const supportedContentLanguages = [
+    'English', 'Hindi', 'Marathi', 'Telugu', 'Tamil', 'Gujarati',
+  ];
 
   @override
   void dispose() {
@@ -149,6 +163,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         'postId': postId,
         'uid': user.uid,
         'type': _type,
+        'contentLanguage': _contentLanguage,
         'rawNotes': _notes.text.trim(),
         'beforeImageUrl': beforeUrl,
         'afterImageUrl': afterUrl,
@@ -199,6 +214,20 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
             ],
             selected: {_type},
             onSelectionChanged: (value) => setState(() => _type = value.first),
+          ),
+          const SizedBox(height: 14),
+          DropdownButtonFormField<String>(
+            initialValue: _contentLanguage,
+            decoration: const InputDecoration(labelText: 'Post content language'),
+            items: supportedContentLanguages
+                .map((language) => DropdownMenuItem(
+                      value: language,
+                      child: Text(language),
+                    ))
+                .toList(),
+            onChanged: (value) {
+              if (value != null) setState(() => _contentLanguage = value);
+            },
           ),
           const SizedBox(height: 14),
           TextField(
