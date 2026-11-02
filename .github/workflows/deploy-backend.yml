@@ -6,8 +6,6 @@ on:
       - main
     paths:
       - "firestore.rules"
-      - "storage.rules"
-      - "firebase.json"
       - "worker/**"
       - ".github/workflows/deploy-backend.yml"
   workflow_dispatch:
