@@ -26,7 +26,9 @@ class BackendApiService {
     }
     final user = _auth.currentUser;
     if (user == null) throw StateError('Please sign in again.');
-    final token = await user.getIdToken();
+    // Force-refresh the Firebase ID token before calling the Worker. This avoids
+    // sending a cached token that may already have expired in the browser session.
+    final token = await user.getIdToken(true);
     if (token == null || token.isEmpty) {
       throw StateError(
           'Your sign-in session has expired. Please sign in again.');
