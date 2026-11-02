@@ -73,7 +73,7 @@ class _ApprovalCardState extends State<_ApprovalCard> {
       _error = null;
     });
     try {
-      final result = await FirebaseFunctions.instance
+      final result = await FirebaseFunctions.instanceFor(region: 'asia-south1')
           .httpsCallable('generateMorePostCaptions')
           .call({'postId': widget.post.id});
       final data = Map<String, dynamic>.from(result.data as Map);
