@@ -53,9 +53,12 @@ class ImageUploadService {
   String _contentType(String name) {
     final extension = name.toLowerCase().split('.').last;
     switch (extension) {
-      case 'png': return 'image/png';
-      case 'webp': return 'image/webp';
-      default: return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      default:
+        return 'image/jpeg';
     }
   }
 }
