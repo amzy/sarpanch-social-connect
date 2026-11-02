@@ -103,7 +103,7 @@ ThemeData buildAppTheme(AppThemeId themeId, Brightness brightness) {
       margin: const EdgeInsets.symmetric(vertical: 6),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: scheme.outlineVariant.withOpacity(0.45)),
+        side: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.45)),
       ),
     ),
     inputDecorationTheme: InputDecorationTheme(
