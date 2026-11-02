@@ -10,6 +10,79 @@ import 'data/post_repository.dart';
 class ApprovalQueueScreen extends StatelessWidget {
   const ApprovalQueueScreen({super.key});
 
+  Future<void> _shareWhatsApp(String destination) async {
+    final data = widget.post.data();
+    final destinationName =
+        destination == 'group' ? 'Panchayat WhatsApp Group' : 'Panchayat WhatsApp Channel';
+    final guidance = destination == 'group'
+        ? 'In the share sheet, choose WhatsApp and select the official Panchayat group.'
+        : 'Share the image and caption to WhatsApp, then open the official Panchayat Channel and publish the update there.';
+
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text('Share to $destinationName'),
+          content: Text(guidance),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+      if (!mounted) return;
+      // Continue with the platform share sheet. The app never assumes that
+      // returning from the sheet means the content was actually delivered.
+      await LocalShareService().sharePost(
+        imageUrl: (data['finalCompositedImage'] as String?) ?? '',
+        caption: _caption.text.trim(),
+      );
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Confirm WhatsApp delivery'),
+          content: Text('Did you successfully share this update to the $destinationName?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Not yet'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Yes, shared'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true) {
+        await BackendApiService().recordWhatsAppDelivery(
+          postId: widget.post.id,
+          destination: destination,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$destinationName marked as confirmed.')),
+          );
+        }
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = 'WhatsApp share failed: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context)!;
@@ -204,6 +277,16 @@ class _ApprovalCardState extends State<_ApprovalCard> {
               onPressed: _busy ? null : _share,
               icon: const Icon(Icons.share_outlined),
               label: Text(strings.share),
+            ),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : () => _shareWhatsApp('group'),
+              icon: const Icon(Icons.groups_outlined),
+              label: const Text('Share to Panchayat WhatsApp Group'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : () => _shareWhatsApp('channel'),
+              icon: const Icon(Icons.campaign_outlined),
+              label: const Text('Publish to Panchayat WhatsApp Channel'),
             ),
             Row(
               children: [
