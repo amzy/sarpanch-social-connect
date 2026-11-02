@@ -147,9 +147,8 @@ class _ApprovalCardState extends State<_ApprovalCard> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: FilledButton.icon(
-                    onPressed: _busy
-                        ? null
-                        : () => _update('approved_to_publish'),
+                    onPressed:
+                        _busy ? null : () => _update('approved_to_publish'),
                     icon: const Icon(Icons.publish),
                     label: Text(strings.approve),
                   ),

@@ -20,8 +20,7 @@ class LocalShareService {
     if (!await Gal.hasAccess())
       throw Exception('Photo library permission was not granted.');
     await Gal.putImageBytes(bytes, album: 'Sarpanch Social Connect');
-    final isPng =
-        bytes.length > 8 &&
+    final isPng = bytes.length > 8 &&
         bytes[0] == 0x89 &&
         bytes[1] == 0x50 &&
         bytes[2] == 0x4E &&

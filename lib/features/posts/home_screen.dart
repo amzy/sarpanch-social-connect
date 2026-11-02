@@ -129,9 +129,8 @@ class _Dashboard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 32,
-                  foregroundImage: imageUrl.isNotEmpty
-                      ? NetworkImage(imageUrl)
-                      : null,
+                  foregroundImage:
+                      imageUrl.isNotEmpty ? NetworkImage(imageUrl) : null,
                   child: imageUrl.isEmpty
                       ? const Icon(Icons.person, size: 30)
                       : null,
@@ -143,7 +142,9 @@ class _Dashboard extends StatelessWidget {
                     children: [
                       Text(
                         name,
-                        style: Theme.of(context).textTheme.titleLarge
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
                             ?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       Text(panchayat),

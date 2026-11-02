@@ -39,12 +39,11 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
 
   String? _emailValid(String? v) =>
       (v != null && RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v.trim()))
-      ? null
-      : 'Enter a valid email address.';
+          ? null
+          : 'Enter a valid email address.';
   String? _passwordValid(String? v) =>
       (v != null && v.length >= 8) ? null : 'Use at least 8 characters.';
-  String? _usernameValid(String? v) =>
-      (v != null &&
+  String? _usernameValid(String? v) => (v != null &&
           RegExp(r'^[a-z][a-z0-9_]{2,19}$').hasMatch(v.trim().toLowerCase()))
       ? null
       : 'Use 3–20 letters, numbers or underscores; start with a letter.';
@@ -70,7 +69,8 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         final user = (await auth.createUserWithEmailAndPassword(
           email: email,
           password: _password.text,
-        )).user!;
+        ))
+            .user!;
         try {
           await FirebaseFirestore.instance.runTransaction((tx) async {
             final claim = FirebaseFirestore.instance
@@ -109,7 +109,8 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         await auth.signOut();
         if (mounted)
           setState(
-            () => _notice = 'Account created. You can now sign in. A verification email was sent if email delivery is enabled.',
+            () => _notice =
+                'Account created. You can now sign in. A verification email was sent if email delivery is enabled.',
           );
       }
     } on FirebaseAuthException catch (e) {
@@ -119,7 +120,8 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         'weak-password' => 'Choose a stronger password.',
         'user-not-found' ||
         'wrong-password' ||
-        'invalid-credential' => 'Email or password is incorrect.',
+        'invalid-credential' =>
+          'Email or password is incorrect.',
         'too-many-requests' => 'Too many attempts. Try again later.',
         'network-request-failed' => 'Check your internet connection.',
         _ => e.message ?? 'Authentication failed: ' + e.code,
@@ -302,12 +304,12 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       onPressed: _busy
                           ? null
                           : () => setState(
-                              () => {
-                                _register = !_register,
-                                _error = null,
-                                _notice = null,
-                              },
-                            ),
+                                () => {
+                                  _register = !_register,
+                                  _error = null,
+                                  _notice = null,
+                                },
+                              ),
                       child: Text(
                         _register
                             ? 'Already registered? Sign in'

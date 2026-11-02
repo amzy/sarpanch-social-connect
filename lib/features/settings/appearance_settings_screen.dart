@@ -22,7 +22,9 @@ class AppearanceSettingsScreen extends ConsumerWidget {
           const SizedBox(height: 6),
           Text(
             'Choose an accent palette. Your Panchayat logo, official seal and poster identity remain unchanged.',
-            style: Theme.of(context).textTheme.bodyMedium
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
                 ?.copyWith(color: colors.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
@@ -63,7 +65,9 @@ class AppearanceSettingsScreen extends ConsumerWidget {
           const SizedBox(height: 6),
           Text(
             'Use light or dark appearance, or follow your device setting.',
-            style: Theme.of(context).textTheme.bodyMedium
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
                 ?.copyWith(color: colors.onSurfaceVariant),
           ),
           const SizedBox(height: 12),
