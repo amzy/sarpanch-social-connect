@@ -282,6 +282,10 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
                       (widget.profile['sarpanchName'] as String?) ?? '',
                   panchayatName:
                       (widget.profile['panchayatName'] as String?) ?? '',
+                  sarpanchNameHindi:
+                      (widget.profile['sarpanchNameHindi'] as String?) ?? '',
+                  panchayatNameHindi:
+                      (widget.profile['panchayatNameHindi'] as String?) ?? '',
                   profileImageUrl:
                       (widget.profile['imageUrl'] as String?) ?? '',
                   sealUrl: (widget.profile['sealUrl'] as String?) ?? '',
