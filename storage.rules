@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+    function owns(uid) { return signedIn() && request.auth.uid == uid; }
+    function validImage() {
+      return request.resource.size < 1 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp)');
+    }
+    match /users/{uid}/profile/{fileName} {
+      allow read: if owns(uid);
+      allow write: if owns(uid) && validImage();
+    }
+    match /users/{uid}/posts/{fileName} {
+      allow read: if owns(uid);
+      allow write: if owns(uid) && validImage();
+    }
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function owns(uid) { return signedIn() && request.auth.uid == uid; }
+    function validPostType(type) { return type in ['festival', 'development']; }
+    function validClientPostCreate(postId) {
+      return request.resource.data.keys().hasOnly([
+        'postId', 'uid', 'type', 'creationTimestamp', 'rawNotes',
+        'beforeImageUrl', 'afterImageUrl', 'finalCompositedImage',
+        'status', 'scheduledTime'
+      ])
+      && request.resource.data.uid == request.auth.uid
+      && request.resource.data.postId == postId
+      && validPostType(request.resource.data.type)
+      && request.resource.data.status == 'pending_ai'
+      && request.resource.data.creationTimestamp == request.time
+      && request.resource.data.rawNotes is string
+      && request.resource.data.beforeImageUrl is string
+      && request.resource.data.afterImageUrl is string
+      && request.resource.data.finalCompositedImage is string
+      && (request.resource.data.scheduledTime == null || request.resource.data.scheduledTime is timestamp);
+    }
+
+    match /users/{uid} {
+      allow read: if owns(uid);
+      allow create: if owns(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.keys().hasOnly([
+          'uid', 'sarpanchName', 'panchayatName', 'district', 'state',
+          'primaryLanguage', 'imageUrl', 'sealUrl', 'createdAt',
+          'plan', 'billingStatus'
+        ])
+        && request.resource.data.get('plan', 'free') == 'free'
+        && request.resource.data.get('billingStatus', 'active') == 'active'
+        && request.resource.data.sarpanchName is string
+        && request.resource.data.panchayatName is string
+        && request.resource.data.district is string
+        && request.resource.data.state is string
+        && request.resource.data.primaryLanguage in ['English', 'Hindi', 'Marathi', 'Telugu', 'Tamil', 'Gujarati'];
+      allow update: if owns(uid)
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'sarpanchName', 'panchayatName', 'district', 'state',
+          'primaryLanguage', 'imageUrl', 'sealUrl'
+        ]);
+      allow delete: if false;
+
+      match /private/{document=**} {
+        allow read, write: if false;
+      }
+    }
+
+    match /posts_queue/{postId} {
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
+      allow create: if signedIn() && validClientPostCreate(postId);
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && (
+          (resource.data.status == 'pending_approval'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['aiCaption', 'scheduledTime'])
+            && request.resource.data.aiCaption is string)
+          ||
+          (resource.data.status == 'pending_approval'
+            && request.resource.data.status == 'approved_to_publish'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'aiCaption'])
+            && request.resource.data.aiCaption is string)
+          ||
+          (resource.data.status == 'pending_approval'
+            && request.resource.data.status == 'rejected'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']))
+        );
+      allow delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
