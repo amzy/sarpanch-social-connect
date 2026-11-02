@@ -206,8 +206,12 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
       postCreated = true;
       try {
         await BackendApiService().generatePost(postId);
-      } catch (_) {
-        await BackendApiService().retryPost(postId);
+      } catch (generationError) {
+        await PostRepository().markGenerationFailed(
+          postId,
+          generationError.toString(),
+        );
+        rethrow;
       }
       if (mounted) Navigator.of(context).pop();
     } catch (error) {
@@ -222,7 +226,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
       }
       setState(
         () => _error = postCreated
-            ? 'Your post is saved, but caption generation could not be confirmed. Check the Failed tab or retry shortly. $error'
+            ? 'Your post was saved to Failed because caption generation could not be completed. Open the Failed tab to retry. $error'
             : 'Could not submit. Your retry record is saved on this device. $error',
       );
     } finally {
