@@ -15,6 +15,7 @@ class BeforeAfterCanvas extends StatelessWidget {
     required this.sealUrl,
     required this.notes,
     this.stacked = false,
+    this.frameStyle = 'classic',
   });
 
   final File? beforeFile;
@@ -27,6 +28,7 @@ class BeforeAfterCanvas extends StatelessWidget {
   final String sealUrl;
   final String notes;
   final bool stacked;
+  final String frameStyle;
 
   Widget _photo(File? file, String label) {
     return Expanded(
@@ -77,6 +79,14 @@ class BeforeAfterCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final frameColor = switch (frameStyle) {
+      'celebration' => const Color(0xFF9C3D78),
+      'development' => const Color(0xFF176B55),
+      'announcement' => const Color(0xFFB34B16),
+      'minimal' => const Color(0xFF455A64),
+      'tricolor' => const Color(0xFF174A8B),
+      _ => const Color(0xFF245C4A),
+    };
     final images = stacked
         ? Column(
             children: [
@@ -99,7 +109,7 @@ class BeforeAfterCanvas extends StatelessWidget {
         padding: const EdgeInsets.all(22),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: const Color(0xFF245C4A), width: 4),
+          border: Border.all(color: frameColor, width: frameStyle == 'minimal' ? 2 : 5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -146,7 +156,14 @@ class BeforeAfterCanvas extends StatelessWidget {
                 ),
               ),
             const SizedBox(height: 18),
-            Container(height: 3, color: const Color(0xFF245C4A)),
+            if (frameStyle == 'tricolor')
+              const Row(children: [
+                Expanded(child: SizedBox(height: 7, child: ColoredBox(color: Color(0xFFFF9933)))),
+                Expanded(child: SizedBox(height: 7, child: ColoredBox(color: Color(0xFFFFFFFF)))),
+                Expanded(child: SizedBox(height: 7, child: ColoredBox(color: Color(0xFF138808)))),
+              ])
+            else
+              Container(height: 4, color: frameColor),
             const SizedBox(height: 12),
             Row(
               children: [
