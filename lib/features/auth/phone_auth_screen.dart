@@ -50,7 +50,6 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         timeout: const Duration(seconds: 60),
         verificationCompleted: (credential) async {
           await FirebaseAuth.instance.signInWithCredential(credential);
-      await _bootstrapDevelopmentAdmin();
           await _bootstrapDevelopmentAdmin();
         },
         verificationFailed: (exception) => setState(() => _error = exception.message ?? 'Phone verification failed.'),
@@ -71,6 +70,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
     try {
       final credential = PhoneAuthProvider.credential(verificationId: id, smsCode: _otp.text.trim());
       await FirebaseAuth.instance.signInWithCredential(credential);
+      await _bootstrapDevelopmentAdmin();
     } on FirebaseAuthException catch (error) {
       setState(() => _error = '${error.code}: ${error.message ?? 'The OTP is invalid or expired.'}');
     } finally {
