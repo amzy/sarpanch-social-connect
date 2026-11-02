@@ -221,15 +221,9 @@ export const bootstrapDevelopmentAdmin = onCall({ region: FUNCTION_REGION }, asy
   }
 
   await getAuth().setCustomUserClaims(request.auth.uid, {
-    ...existingClaims,
     admin: true,
     developmentAdmin: true,
   });
-  await db.doc(`users/${request.auth.uid}`).set({
-    role: 'admin',
-    developmentAdmin: true,
-    adminGrantedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
 
   return { isAdmin: true, alreadyConfigured: false };
 });
