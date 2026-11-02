@@ -132,7 +132,10 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.initialProfile == null ? strings.profileSetup : 'Edit Panchayat profile')),
+      appBar: AppBar(
+          title: Text(widget.initialProfile == null
+              ? strings.profileSetup
+              : 'Edit Panchayat profile')),
       body: SafeArea(
         child: Form(
           key: _formKey,
@@ -154,20 +157,26 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                     (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
               const SizedBox(height: 14),
-              Text('Names for official Hindi posters', style: Theme.of(context).textTheme.titleMedium),
+              Text('Names for official Hindi posters',
+                  style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 6),
-              const Text('Enter these exactly as they should appear. The app will not transliterate or guess spellings.'),
+              const Text(
+                  'Enter these exactly as they should appear. The app will not transliterate or guess spellings.'),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _sarpanchHindi,
                 textDirection: TextDirection.rtl,
-                decoration: const InputDecoration(labelText: 'Sarpanch name (Hindi)', hintText: 'उदाहरण: उमर फारुख'),
+                decoration: const InputDecoration(
+                    labelText: 'Sarpanch name (Hindi)',
+                    hintText: 'उदाहरण: उमर फारुख'),
               ),
               const SizedBox(height: 14),
               TextFormField(
                 controller: _panchayatHindi,
                 textDirection: TextDirection.rtl,
-                decoration: const InputDecoration(labelText: 'Gram Panchayat name (Hindi)', hintText: 'उदाहरण: गगवाना'),
+                decoration: const InputDecoration(
+                    labelText: 'Gram Panchayat name (Hindi)',
+                    hintText: 'उदाहरण: गगवाना'),
               ),
               const SizedBox(height: 14),
               TextFormField(

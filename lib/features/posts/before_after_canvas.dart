@@ -114,7 +114,9 @@ class BeforeAfterCanvas extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    panchayatNameHindi.isNotEmpty ? panchayatNameHindi : panchayatName,
+                    panchayatNameHindi.isNotEmpty
+                        ? panchayatNameHindi
+                        : panchayatName,
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
@@ -164,7 +166,9 @@ class BeforeAfterCanvas extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        sarpanchNameHindi.isNotEmpty ? sarpanchNameHindi : sarpanchName,
+                        sarpanchNameHindi.isNotEmpty
+                            ? sarpanchNameHindi
+                            : sarpanchName,
                         style: const TextStyle(
                           fontSize: 21,
                           fontWeight: FontWeight.bold,

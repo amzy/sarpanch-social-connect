@@ -57,7 +57,8 @@ class _HomeContentState extends State<_HomeContent> {
             icon: const Icon(Icons.edit_note),
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => ProfileSetupScreen(initialProfile: widget.profile),
+                builder: (_) =>
+                    ProfileSetupScreen(initialProfile: widget.profile),
               ),
             ),
           ),
