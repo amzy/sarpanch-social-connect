@@ -40,11 +40,11 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
               'profileComplete':false,'plan':'free','billingStatus':'active','createdAt':FieldValue.serverTimestamp(),
             });
           });
-          await user.updateDisplayName(username);
-          await user.sendEmailVerification();
-          await auth.signOut();
-          if(mounted)setState(()=>_notice='Account created. Verify your email, then sign in.');
         }catch(_){await user.delete();rethrow;}
+        await user.updateDisplayName(username);
+        try { await user.sendEmailVerification(); } catch (error) { debugPrint('Email verification message could not be sent: $error'); }
+        await auth.signOut();
+        if(mounted)setState(()=>_notice='Account created. You can now sign in. A verification email was sent if email delivery is enabled.');
       }
     }on FirebaseAuthException catch(e){
       final msg=switch(e.code){
