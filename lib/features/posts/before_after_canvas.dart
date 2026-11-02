@@ -9,6 +9,8 @@ class BeforeAfterCanvas extends StatelessWidget {
     required this.afterFile,
     required this.sarpanchName,
     required this.panchayatName,
+    required this.sarpanchNameHindi,
+    required this.panchayatNameHindi,
     required this.profileImageUrl,
     required this.sealUrl,
     required this.notes,
@@ -19,6 +21,8 @@ class BeforeAfterCanvas extends StatelessWidget {
   final File? afterFile;
   final String sarpanchName;
   final String panchayatName;
+  final String sarpanchNameHindi;
+  final String panchayatNameHindi;
   final String profileImageUrl;
   final String sealUrl;
   final String notes;
@@ -110,7 +114,7 @@ class BeforeAfterCanvas extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    panchayatName,
+                    panchayatNameHindi.isNotEmpty ? panchayatNameHindi : panchayatName,
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
@@ -160,7 +164,7 @@ class BeforeAfterCanvas extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        sarpanchName,
+                        sarpanchNameHindi.isNotEmpty ? sarpanchNameHindi : sarpanchName,
                         style: const TextStyle(
                           fontSize: 21,
                           fontWeight: FontWeight.bold,
