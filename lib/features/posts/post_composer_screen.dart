@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -29,8 +28,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   final _picker = ImagePicker();
   final _uploads = ImageUploadService();
   final _retryQueue = RetryQueueService();
-  File? _before;
-  File? _after;
+  XFile? _before;
+  XFile? _after;
   String _type = 'development';
   late String _contentLanguage;
   bool _stacked = false;
@@ -84,12 +83,11 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
     if (source == null || !mounted) return;
     final file = await _picker.pickImage(source: source, imageQuality: 90);
     if (file == null || !mounted) return;
-    final compressed = await _uploads.compress(file);
     setState(() {
       if (before) {
-        _before = File(compressed.path);
+        _before = file;
       } else {
-        _after = File(compressed.path);
+        _after = file;
       }
     });
   }
@@ -168,14 +166,14 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         beforeUrl = await _uploads.uploadFile(
           uid: user.uid,
           path: 'users/${user.uid}/posts/$postId-before.jpg',
-          file: XFile(_before!.path),
+          file: _before!,
         );
       }
       if (_after != null) {
         afterUrl = await _uploads.uploadFile(
           uid: user.uid,
           path: 'users/${user.uid}/posts/$postId-after.jpg',
-          file: XFile(_after!.path),
+          file: _after!,
         );
       }
       var imageUrl = '';
@@ -213,8 +211,6 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
           'postId': postId,
           'type': _type,
           'rawNotes': _notes.text.trim(),
-          'beforePath': _before?.path,
-          'afterPath': _after?.path,
           'error': error.toString(),
         });
       }
@@ -391,8 +387,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
               child: RepaintBoundary(
                 key: _canvasKey,
                 child: BeforeAfterCanvas(
-                  beforeFile: _before,
-                  afterFile: _after,
+                  beforeBytes: _before == null ? null : await _before!.readAsBytes(),
+                  afterBytes: _after == null ? null : await _after!.readAsBytes(),
                   sarpanchName:
                       (widget.profile['sarpanchName'] as String?) ?? '',
                   panchayatName:
