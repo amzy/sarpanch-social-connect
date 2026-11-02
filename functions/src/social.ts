@@ -17,8 +17,12 @@ export async function publishFacebook(
   pageId: string,
   pageToken: string,
 ): Promise<{ id: string }> {
-  const endpoint = `https://graph.facebook.com/${META_GRAPH_VERSION.value()}/${encodeURIComponent(pageId)}/photos`;
-  const body = new URLSearchParams({ url: imageUrl, caption, access_token: pageToken });
+  const hasImage = imageUrl.trim().isNotEmpty;
+  const endpoint = `https://graph.facebook.com/${META_GRAPH_VERSION.value()}/${encodeURIComponent(pageId)}/${hasImage ? 'photos' : 'feed'}`;
+  const body = new URLSearchParams({
+    ...(hasImage ? { url: imageUrl, caption } : { message: caption }),
+    access_token: pageToken,
+  });
   const response = await fetch(endpoint, { method: 'POST', body });
   if (!response.ok) throw new Error(await readError(response));
   const data = await response.json() as { id?: string; post_id?: string };
