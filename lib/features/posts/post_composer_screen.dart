@@ -150,12 +150,15 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
           file: XFile(_after!.path),
         );
       }
-      final bytes = await _captureCanvas();
-      final imageUrl = await _uploads.uploadBytes(
-        uid: user.uid,
-        path: 'users/${user.uid}/posts/$postId.png',
-        bytes: bytes,
-      );
+      var imageUrl = '';
+      if (_before != null || _after != null) {
+        final bytes = await _captureCanvas();
+        imageUrl = await _uploads.uploadBytes(
+          uid: user.uid,
+          path: 'users/${user.uid}/posts/$postId.png',
+          bytes: bytes,
+        );
+      }
       await PostRepository().createPost({
         'postId': postId,
         'uid': user.uid,
