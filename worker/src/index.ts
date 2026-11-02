@@ -312,7 +312,8 @@ async function publish(env: Env, uid: string, postId: string): Promise<Json> {
   const success = Object.values(results).some((value: any) => value?.ok);
   const configured = Boolean(credentials.facebookPageToken && credentials.facebookPageId) || Boolean(credentials.facebookPageToken && credentials.instagramId && imageUrl) || Boolean(credentials.twitterToken);
   const latest = await getDoc(env, path);
-  const status = success ? "published" : "failed";
+  const hasFailures = Object.values(results).some((value: any) => value && value.ok === false);
+  const status = success && !hasFailures ? "published" : "failed";
   await patchDoc(env, path, {
     status, publishResults: results,
     publishedAt: success ? { __timestamp: new Date().toISOString() } : null,
@@ -364,6 +365,8 @@ async function handle(request: Request, env: Env): Promise<Response> {
       const post = await getDoc(env, path);
       if (post.data.uid !== user.uid) fail("Post not found.", 404);
       if (post.data.status !== "pending_approval") fail("Post is not awaiting approval.", 409);
+      const owner = await getDoc(env, `users/${user.uid}`);
+      if (String(owner.data.plan ?? "").toLowerCase() !== "premium" || String(owner.data.billingStatus ?? "").toLowerCase() !== "active") fail("Premium subscription is required for automatic publishing. You can still use Share to publish manually.", 403);
       await patchDoc(env, path, { aiCaption: caption, status: "approved_to_publish" }, post.updateTime);
       return response(await publish(env, user.uid, postId), 200, origin);
     }
