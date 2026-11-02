@@ -17,7 +17,7 @@ export async function publishFacebook(
   pageId: string,
   pageToken: string,
 ): Promise<{ id: string }> {
-  const hasImage = imageUrl.trim().isNotEmpty;
+  const hasImage = imageUrl.trim().length > 0;
   const endpoint = `https://graph.facebook.com/${META_GRAPH_VERSION.value()}/${encodeURIComponent(pageId)}/${hasImage ? 'photos' : 'feed'}`;
   const body = new URLSearchParams({
     ...(hasImage ? { url: imageUrl, caption } : { message: caption }),
