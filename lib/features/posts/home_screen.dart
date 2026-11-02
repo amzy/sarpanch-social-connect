@@ -73,12 +73,12 @@ class _Dashboard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context)!;
-    final name = String(profile['sarpanchName'] ?? '');
-    final panchayat = String(profile['panchayatName'] ?? '');
-    final language = String(profile['primaryLanguage'] ?? 'Hindi');
+    final name = (profile['sarpanchName'] as String?) ?? '';
+    final panchayat = (profile['panchayatName'] as String?) ?? '';
+    final language = (profile['primaryLanguage'] as String?) ?? 'Hindi';
     return ListView(padding: const EdgeInsets.all(20), children: [
       Card(child: Padding(padding: const EdgeInsets.all(20), child: Row(children: [
-        CircleAvatar(radius: 32, foregroundImage: String(profile['imageUrl'] ?? '').isNotEmpty ? NetworkImage(String(profile['imageUrl'])) : null, child: String(profile['imageUrl'] ?? '').isEmpty ? const Icon(Icons.person, size: 30) : null),
+        CircleAvatar(radius: 32, foregroundImage: (profile['imageUrl'] as String?) ?? ''.isNotEmpty ? NetworkImage((profile['imageUrl'] as String?) ?? '') : null, child: String(profile['imageUrl'] ?? '').isEmpty ? const Icon(Icons.person, size: 30) : null),
         const SizedBox(width: 14),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(name, style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)), Text(panchayat), Text(language, style: Theme.of(context).textTheme.bodySmall)])),
       ]))),
@@ -87,8 +87,8 @@ class _Dashboard extends StatelessWidget {
       const SizedBox(height: 10),
       FilledButton.icon(onPressed: onCompose, icon: const Icon(Icons.auto_awesome), label: Text(strings.createPost), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56))),
       const SizedBox(height: 20),
-      Card(child: ListTile(leading: const Icon(Icons.verified_user_outlined), title: const Text('Approval before publishing'), subtitle: const Text('AI drafts are never published automatically. Review and edit every caption before dispatch.'))),
-      Card(child: ListTile(leading: const Icon(Icons.wifi_off_outlined), title: const Text('Offline-friendly'), subtitle: const Text('Images are compressed on your phone. Failed submissions are retained in a local retry queue.'))),
+      const Card(child: ListTile(leading: Icon(Icons.verified_user_outlined), title: Text('Approval before publishing'), subtitle: Text('AI drafts are never published automatically. Review and edit every caption before dispatch.'))),
+      const Card(child: ListTile(leading: Icon(Icons.wifi_off_outlined), title: Text('Offline-friendly'), subtitle: Text('Images are compressed on your phone. Failed submissions are retained in a local retry queue.'))),
     ]);
   }
 }
