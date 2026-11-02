@@ -30,6 +30,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   final _retryQueue = RetryQueueService();
   XFile? _before;
   XFile? _after;
+  Uint8List? _beforeBytes;
+  Uint8List? _afterBytes;
   String _type = 'development';
   late String _contentLanguage;
   bool _stacked = false;
@@ -83,11 +85,15 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
     if (source == null || !mounted) return;
     final file = await _picker.pickImage(source: source, imageQuality: 90);
     if (file == null || !mounted) return;
+    final bytes = await file.readAsBytes();
+    if (bytes.isEmpty || !mounted) return;
     setState(() {
       if (before) {
         _before = file;
+        _beforeBytes = bytes;
       } else {
         _after = file;
+        _afterBytes = bytes;
       }
     });
   }
@@ -351,7 +357,10 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () => setState(() => _before = null),
+                onPressed: () => setState(() {
+                  _before = null;
+                  _beforeBytes = null;
+                }),
                 child: const Text('Remove before photo'),
               ),
             ),
@@ -366,7 +375,10 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
-                onPressed: () => setState(() => _after = null),
+                onPressed: () => setState(() {
+                  _after = null;
+                  _afterBytes = null;
+                }),
                 child: const Text('Remove after photo'),
               ),
             ),
@@ -387,8 +399,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
               child: RepaintBoundary(
                 key: _canvasKey,
                 child: BeforeAfterCanvas(
-                  beforeBytes: _before == null ? null : await _before!.readAsBytes(),
-                  afterBytes: _after == null ? null : await _after!.readAsBytes(),
+                  beforeBytes: _beforeBytes,
+                  afterBytes: _afterBytes,
                   sarpanchName:
                       (widget.profile['sarpanchName'] as String?) ?? '',
                   panchayatName:
