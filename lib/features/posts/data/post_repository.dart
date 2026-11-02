@@ -36,7 +36,8 @@ class PostRepository {
       _firestore.collection('posts_queue').doc(postId).update({
         'status': 'failed',
         'failureCode': 'CLIENT_GENERATION_REQUEST_FAILED',
-        'failureMessage': message.length > 500 ? message.substring(0, 500) : message,
+        'failureMessage':
+            message.length > 500 ? message.substring(0, 500) : message,
       });
 
   Future<void> updateCaption(String postId, String caption) => _firestore
