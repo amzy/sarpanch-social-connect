@@ -91,7 +91,7 @@ Provider OAuth consent and token refresh are not yet implemented. Until then, cr
 - This request-driven design does not promise unattended scheduled publishing.
 - Firestore update-time preconditions reject stale concurrent writes. A client disconnect can still occur after an external API has started processing.
 - Service-account JSON, Gemini keys, social tokens and encryption keys must never be committed or pasted into chat.
-- The legacy functions/ directory is retained temporarily for comparison and rollback. It is no longer referenced by firebase.json or CI. Remove it only after the Worker migration is verified in the deployed app.
+- Firebase Cloud Functions source and deployment configuration are removed from this branch.
 
 ## Checks
 
