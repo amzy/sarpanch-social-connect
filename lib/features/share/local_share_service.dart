@@ -11,6 +11,13 @@ class LocalShareService {
     required String imageUrl,
     required String caption,
   }) async {
+    if (imageUrl.trim().isEmpty) {
+      await Clipboard.setData(ClipboardData(text: caption));
+      await SharePlus.instance.share(
+        ShareParams(text: caption, subject: 'Gram Panchayat update'),
+      );
+      return;
+    }
     final bytes = await FirebaseStorage.instance
         .refFromURL(imageUrl)
         .getData(8 * 1024 * 1024);
