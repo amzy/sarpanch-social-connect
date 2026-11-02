@@ -12,6 +12,7 @@ export interface Env {
 type Json = Record<string, unknown>;
 type FirestoreDocument = { name: string; fields?: Record<string, unknown>; updateTime?: string };
 const LANGUAGES = new Set(["English", "Hindi", "Marathi", "Telugu", "Tamil", "Gujarati"]);
+const POST_TYPES = new Set(["festival", "development", "announcement", "project", "event", "public_service"]);
 const encoder = new TextEncoder();
 let cachedAccessToken: { token: string; expiresAt: number } | undefined;
 
@@ -171,6 +172,8 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
   const path = `posts_queue/${postId}`;
   const current = await getDoc(env, path);
   if (current.data.uid !== uid) fail("Post not found.", 404);
+  if (!POST_TYPES.has(String(current.data.type ?? ""))) fail("Unsupported post type.", 400);
+  if (String(current.data.rawNotes ?? "").length > 5000) fail("Post description is too long.", 400);
   if (refresh) {
     if (current.data.status !== "pending_approval") fail("Post is not awaiting approval.", 409);
     if (Number(current.data.captionRefreshCount ?? 0) >= 5) fail("Maximum of five refreshes reached.", 429);
@@ -178,9 +181,15 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
     if (current.data.status !== "pending_ai") fail("Post is not waiting for AI generation.", 409);
   }
   const user = await getDoc(env, `users/${uid}`);
-  if (user.data.billingStatus !== "active") fail("Your account is not active for AI generation.", 403);
+  if (user.data.billingStatus !== "active") {
+    if (!refresh) await patchDoc(env, path, { status: "failed", failureCode: "BILLING_INACTIVE" }, current.updateTime);
+    fail("Your account is not active for AI generation.", 403);
+  }
   const language = String(current.data.contentLanguage ?? user.data.primaryLanguage ?? "Hindi");
-  if (!LANGUAGES.has(language)) fail("Unsupported content language.", 400);
+  if (!LANGUAGES.has(language)) {
+    if (!refresh) await patchDoc(env, path, { status: "failed", failureCode: "UNSUPPORTED_LANGUAGE" }, current.updateTime);
+    fail("Unsupported content language.", 400);
+  }
   const plan = String(user.data.plan ?? "free").toLowerCase();
   const usage = (user.data.usage ?? {}) as Json;
   const aiUsage = (usage.aiGenerations ?? {}) as Json;
@@ -330,13 +339,13 @@ async function handle(request: Request, env: Env): Promise<Response> {
     const body = await request.json() as Json;
     if (url.pathname === "/api/posts/generate") {
       const postId = String(body.postId ?? "");
-      if (!postId) fail("postId is required.");
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(postId)) fail("A valid postId is required.");
       const result = await generateForPost(env, user.uid, postId, false);
       return response(result, 200, origin);
     }
     if (url.pathname === "/api/posts/more-options") {
       const postId = String(body.postId ?? "");
-      if (!postId) fail("postId is required.");
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(postId)) fail("A valid postId is required.");
       return response(await generateForPost(env, user.uid, postId, true), 200, origin);
     }
     if (url.pathname === "/api/profile/transliterate") {
