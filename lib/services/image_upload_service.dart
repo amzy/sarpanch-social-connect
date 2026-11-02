@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 
 class ImageUploadService {
   static const int maxBytes = 1024 * 1024;
+  static const int maxWebBytes = 10 * 1024 * 1024;
 
   Future<XFile> compress(XFile input) async {
     if (kIsWeb) {
@@ -48,10 +49,13 @@ class ImageUploadService {
     if (kIsWeb) {
       final bytes = await file.readAsBytes();
       if (bytes.isEmpty) throw Exception('The selected image is empty.');
+      if (bytes.length > maxWebBytes) {
+        throw Exception('Image is larger than 10 MB. Choose a smaller image.');
+      }
       await ref.putData(
         bytes,
         SettableMetadata(contentType: _contentType(file.name)),
-      );
+      ).timeout(const Duration(seconds: 60));
     } else {
       final compressed = await compress(file);
       await ref.putFile(
@@ -59,7 +63,7 @@ class ImageUploadService {
         SettableMetadata(contentType: 'image/jpeg'),
       );
     }
-    return ref.getDownloadURL();
+    return ref.getDownloadURL().timeout(const Duration(seconds: 20));
   }
 
   String _contentType(String name) {
@@ -87,8 +91,12 @@ class ImageUploadService {
     if (bytes.isEmpty) throw Exception('The generated poster image is empty.');
     final ref = FirebaseStorage.instance.ref(path);
     if (kIsWeb) {
-      await ref.putData(bytes, SettableMetadata(contentType: 'image/png'));
-      return ref.getDownloadURL();
+      if (bytes.length > maxWebBytes) {
+        throw Exception('Generated poster is larger than 10 MB.');
+      }
+      await ref.putData(bytes, SettableMetadata(contentType: 'image/png'))
+          .timeout(const Duration(seconds: 60));
+      return ref.getDownloadURL().timeout(const Duration(seconds: 20));
     }
 
     Uint8List optimized = bytes;
