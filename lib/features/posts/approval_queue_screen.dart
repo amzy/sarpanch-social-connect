@@ -23,24 +23,24 @@ class ApprovalQueueScreen extends StatelessWidget {
       _error = null;
     });
     try {
-      await showDialog<void>(
+      final proceed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: Text('Share to $destinationName'),
           content: Text(guidance),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
+              onPressed: () => Navigator.pop(dialogContext, false),
               child: const Text('Cancel'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(dialogContext),
+              onPressed: () => Navigator.pop(dialogContext, true),
               child: const Text('Continue'),
             ),
           ],
         ),
       );
-      if (!mounted) return;
+      if (proceed != true || !mounted) return;
       // Continue with the platform share sheet. The app never assumes that
       // returning from the sheet means the content was actually delivered.
       await LocalShareService().sharePost(
