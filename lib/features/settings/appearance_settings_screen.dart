@@ -29,15 +29,9 @@ class AppearanceSettingsScreen extends ConsumerWidget {
             final palette = brandPalettes[themeId]!;
             final selected = appearance.themeId == themeId;
             return Card(
-              child: RadioListTile<AppThemeId>(
-                value: themeId,
-                groupValue: appearance.themeId,
-                onChanged: (value) {
-                  if (value != null) controller.selectTheme(value);
-                },
-                title: Text(themeId.label),
-                subtitle: Text(themeId.description),
-                secondary: Container(
+              child: ListTile(
+                onTap: () => controller.selectTheme(themeId),
+                leading: Container(
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
@@ -45,9 +39,13 @@ class AppearanceSettingsScreen extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(13),
                     border: Border.all(color: colors.outlineVariant),
                   ),
-                  child: selected
-                      ? const Icon(Icons.check, color: Colors.white)
-                      : null,
+                  child: selected ? const Icon(Icons.check, color: Colors.white) : null,
+                ),
+                title: Text(themeId.label),
+                subtitle: Text(themeId.description),
+                trailing: Icon(
+                  selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                  color: selected ? colors.primary : colors.onSurfaceVariant,
                 ),
               ),
             );
@@ -61,7 +59,7 @@ class AppearanceSettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<ThemeMode>(
-            value: appearance.themeMode,
+            initialValue: appearance.themeMode,
             decoration: const InputDecoration(labelText: 'Display mode'),
             items: const [
               DropdownMenuItem(value: ThemeMode.system, child: Text('Follow system')),
@@ -73,11 +71,11 @@ class AppearanceSettingsScreen extends ConsumerWidget {
             },
           ),
           const SizedBox(height: 24),
-          Card(
+          const Card(
             child: ListTile(
-              leading: const Icon(Icons.translate),
-              title: const Text('Post content language'),
-              subtitle: const Text(
+              leading: Icon(Icons.translate),
+              title: Text('Post content language'),
+              subtitle: Text(
                 'Configured separately in your profile and post composer. The app interface remains English.',
               ),
             ),
