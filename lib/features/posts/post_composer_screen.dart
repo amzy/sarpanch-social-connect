@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/image_upload_service.dart';
+import '../../services/backend_api_service.dart';
 import '../../services/retry_queue_service.dart';
 import 'before_after_canvas.dart';
 import 'data/post_repository.dart';
@@ -172,6 +173,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         'status': 'pending_ai',
         'scheduledTime': null,
       });
+      await BackendApiService().generatePost(postId);
       if (mounted) Navigator.of(context).pop();
     } catch (error) {
       await _retryQueue.enqueue({
