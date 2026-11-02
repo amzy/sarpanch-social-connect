@@ -40,8 +40,8 @@ jobs:
       - name: Install Firebase CLI
         run: npm install --global firebase-tools
 
-      - name: Deploy Firestore and Storage rules
-        run: firebase deploy --only firestore:rules,storage --project sarpanch-social-connect --non-interactive
+      - name: Deploy Firestore rules only (Spark)
+        run: firebase deploy --only firestore:rules --project sarpanch-social-connect --non-interactive
 
   deploy-cloudflare-worker:
     name: Deploy Cloudflare Worker
