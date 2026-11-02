@@ -282,7 +282,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          Text('Choose poster frame', style: Theme.of(context).textTheme.titleMedium),
+          Text('Choose poster frame',
+              style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -291,32 +292,44 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
               ChoiceChip(
                 label: const Text('Classic'),
                 selected: _frameStyle == 'classic',
-                onSelected: _saving ? null : (_) => setState(() => _frameStyle = 'classic'),
+                onSelected: _saving
+                    ? null
+                    : (_) => setState(() => _frameStyle = 'classic'),
               ),
               ChoiceChip(
                 label: const Text('Celebration'),
                 selected: _frameStyle == 'celebration',
-                onSelected: _saving ? null : (_) => setState(() => _frameStyle = 'celebration'),
+                onSelected: _saving
+                    ? null
+                    : (_) => setState(() => _frameStyle = 'celebration'),
               ),
               ChoiceChip(
                 label: const Text('Development'),
                 selected: _frameStyle == 'development',
-                onSelected: _saving ? null : (_) => setState(() => _frameStyle = 'development'),
+                onSelected: _saving
+                    ? null
+                    : (_) => setState(() => _frameStyle = 'development'),
               ),
               ChoiceChip(
                 label: const Text('Announcement'),
                 selected: _frameStyle == 'announcement',
-                onSelected: _saving ? null : (_) => setState(() => _frameStyle = 'announcement'),
+                onSelected: _saving
+                    ? null
+                    : (_) => setState(() => _frameStyle = 'announcement'),
               ),
               ChoiceChip(
                 label: const Text('Minimal'),
                 selected: _frameStyle == 'minimal',
-                onSelected: _saving ? null : (_) => setState(() => _frameStyle = 'minimal'),
+                onSelected: _saving
+                    ? null
+                    : (_) => setState(() => _frameStyle = 'minimal'),
               ),
               ChoiceChip(
                 label: const Text('India tricolour'),
                 selected: _frameStyle == 'tricolor',
-                onSelected: _saving ? null : (_) => setState(() => _frameStyle = 'tricolor'),
+                onSelected: _saving
+                    ? null
+                    : (_) => setState(() => _frameStyle = 'tricolor'),
               ),
             ],
           ),
