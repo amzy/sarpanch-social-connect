@@ -1,4 +1,4 @@
-name: Deploy Firebase rules and Cloudflare Worker
+name: Deploy Firebase Firestore rules and Cloudflare Worker
 
 on:
   push:
@@ -6,7 +6,6 @@ on:
       - main
     paths:
       - "firestore.rules"
-      - "storage.rules"
       - "firebase.json"
       - "worker/**"
       - ".github/workflows/deploy-backend.yml"
@@ -20,8 +19,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy-firebase-rules:
-    name: Deploy Firebase security rules
+  deploy-firestore-rules:
+    name: Deploy Firestore security rules (Spark-compatible)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -40,8 +39,8 @@ jobs:
       - name: Install Firebase CLI
         run: npm install --global firebase-tools
 
-      - name: Deploy Firestore and Storage rules
-        run: firebase deploy --only firestore:rules,storage --project sarpanch-social-connect --non-interactive
+      - name: Deploy Firestore rules only
+        run: firebase deploy --only firestore:rules --project sarpanch-social-connect --non-interactive
 
   deploy-cloudflare-worker:
     name: Deploy Cloudflare Worker
