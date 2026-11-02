@@ -34,6 +34,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   String _type = 'development';
   late String _contentLanguage;
   bool _stacked = false;
+  String _frameStyle = 'classic';
   bool _saving = false;
   String? _error;
 
