@@ -85,8 +85,9 @@ class _ApprovalCardState extends State<_ApprovalCard> {
         _caption.text = captions.first;
       });
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error = 'Could not generate more options: $error');
+      }
     } finally {
       if (mounted) setState(() => _refreshing = false);
     }
@@ -151,8 +152,10 @@ class _ApprovalCardState extends State<_ApprovalCard> {
                 ),
               ),
             const SizedBox(height: 12),
-            if (data['aiCaptions'] is List && (data['aiCaptions'] as List).isNotEmpty) ...[
-              Text('Choose a caption', style: Theme.of(context).textTheme.titleMedium),
+            if (data['aiCaptions'] is List &&
+                (data['aiCaptions'] as List).isNotEmpty) ...[
+              Text('Choose a caption',
+                  style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               RadioGroup<int>(
                 groupValue: _selectedCaption,
