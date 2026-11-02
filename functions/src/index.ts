@@ -57,10 +57,10 @@ export const generatePostCaption = onDocumentCreated({
     const prompt = [
       'Act as a professional public relations writer for an Indian village Gram Panchayat Sarpanch.',
       'Write an impactful, humble, factual public update. Do not invent achievements, budgets, dates, names, statistics, approvals or promises.',
-      `Write entirely in ${language}. Preserve proper nouns and numbers supplied by the user.`,
+      `Write entirely in ${language}. Preserve proper nouns and numbers supplied by the user. Do not transliterate names when an exact Hindi name is provided.`,
       'Use a respectful, accessible tone suitable for village residents. Avoid partisan attacks, inflammatory language, requests for votes, or unsupported political claims.',
       `Post type: ${type}.`,
-      `Sarpanch: ${String(user.sarpanchName ?? '')}. Panchayat: ${String(user.panchayatName ?? '')}. District: ${String(user.district ?? '')}. State: ${String(user.state ?? '')}.`,
+      `Sarpanch name (English): ${String(user.sarpanchName ?? '')}. Sarpanch name (Hindi, exact user-provided spelling): ${String(user.sarpanchNameHindi ?? '')}. Panchayat name (English): ${String(user.panchayatName ?? '')}. Panchayat name (Hindi, exact user-provided spelling): ${String(user.panchayatNameHindi ?? '')}. District: ${String(user.district ?? '')}. State: ${String(user.state ?? '')}.`,
       `User notes: ${rawNotes || 'Create a concise festival greeting based only on the selected festival context.'}`,
       'Return only the caption text, with no quotation marks or explanation.',
     ].join('\n');
