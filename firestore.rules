@@ -4,7 +4,7 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function owns(uid) { return signedIn() && request.auth.uid == uid; }
     function isAdmin() { return signedIn() && request.auth.token.admin == true; }
-    function validPostType(type) { return type in ['festival', 'development']; }
+    function validPostType(type) { return type in ['festival', 'development', 'announcement', 'project', 'event', 'public_service']; }
     function validClientPostCreate(postId) {
       return request.resource.data.keys().hasOnly([
         'postId', 'uid', 'type', 'contentLanguage', 'creationTimestamp', 'rawNotes',
