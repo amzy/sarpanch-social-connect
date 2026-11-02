@@ -1,4 +1,5 @@
-import 'dart:convert';\nimport 'dart:typed_data';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
@@ -71,7 +72,9 @@ class BackendApiService {
       'data': base64Encode(bytes),
     });
     final url = data['url']?.toString() ?? '';
-    if (url.isEmpty) throw StateError('The media service did not return an image URL.');
+    if (url.isEmpty) {
+      throw StateError('The media service did not return an image URL.');
+    }
     return url;
   }
 
