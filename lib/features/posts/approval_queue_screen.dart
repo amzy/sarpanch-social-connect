@@ -77,14 +77,16 @@ class _ApprovalCardState extends State<_ApprovalCard> {
           .httpsCallable('generateMorePostCaptions')
           .call({'postId': widget.post.id});
       final data = Map<String, dynamic>.from(result.data as Map);
-      final captions = (data['captions'] as List).map((value) => value.toString()).toList();
+      final captions =
+          (data['captions'] as List).map((value) => value.toString()).toList();
       if (!mounted || captions.isEmpty) return;
       setState(() {
         _selectedCaption = 0;
         _caption.text = captions.first;
       });
     } catch (error) {
-      if (mounted) setState(() => _error = 'Could not generate more options: $error');
+      if (mounted)
+        setState(() => _error = 'Could not generate more options: $error');
     } finally {
       if (mounted) setState(() => _refreshing = false);
     }
@@ -149,8 +151,10 @@ class _ApprovalCardState extends State<_ApprovalCard> {
                 ),
               ),
             const SizedBox(height: 12),
-            if (data['aiCaptions'] is List && (data['aiCaptions'] as List).isNotEmpty) ...[
-              Text('Choose a caption', style: Theme.of(context).textTheme.titleMedium),
+            if (data['aiCaptions'] is List &&
+                (data['aiCaptions'] as List).isNotEmpty) ...[
+              Text('Choose a caption',
+                  style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),
               ...((data['aiCaptions'] as List).asMap().entries.map((entry) {
                 final index = entry.key;
@@ -161,13 +165,15 @@ class _ApprovalCardState extends State<_ApprovalCard> {
                     groupValue: _selectedCaption,
                     title: Text(caption),
                     subtitle: Text('Option ${index + 1}'),
-                    onChanged: _busy ? null : (value) {
-                      if (value == null) return;
-                      setState(() {
-                        _selectedCaption = value;
-                        _caption.text = caption;
-                      });
-                    },
+                    onChanged: _busy
+                        ? null
+                        : (value) {
+                            if (value == null) return;
+                            setState(() {
+                              _selectedCaption = value;
+                              _caption.text = caption;
+                            });
+                          },
                   ),
                 );
               })),
@@ -175,7 +181,10 @@ class _ApprovalCardState extends State<_ApprovalCard> {
             OutlinedButton.icon(
               onPressed: (_busy || _refreshing) ? null : _moreOptions,
               icon: _refreshing
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.refresh),
               label: Text(_refreshing ? 'Generating…' : 'More options'),
             ),
@@ -183,7 +192,7 @@ class _ApprovalCardState extends State<_ApprovalCard> {
               controller: _caption,
               minLines: 3,
               maxLines: 8,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Edit selected caption',
                 alignLabelWithHint: true,
               ),

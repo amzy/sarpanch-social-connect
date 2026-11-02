@@ -125,7 +125,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     if (_notes.text.trim().isEmpty) {
-      setState(() => _error = 'Describe the update before generating captions.');
+      setState(
+          () => _error = 'Describe the update before generating captions.');
       return;
     }
     setState(() {
@@ -203,12 +204,16 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
             initialValue: _type,
             decoration: const InputDecoration(labelText: 'Post type'),
             items: const [
-              DropdownMenuItem(value: 'development', child: Text('Development update')),
-              DropdownMenuItem(value: 'festival', child: Text('Festival / greeting')),
-              DropdownMenuItem(value: 'announcement', child: Text('Public announcement')),
+              DropdownMenuItem(
+                  value: 'development', child: Text('Development update')),
+              DropdownMenuItem(
+                  value: 'festival', child: Text('Festival / greeting')),
+              DropdownMenuItem(
+                  value: 'announcement', child: Text('Public announcement')),
               DropdownMenuItem(value: 'project', child: Text('Project update')),
               DropdownMenuItem(value: 'event', child: Text('Community event')),
-              DropdownMenuItem(value: 'public_service', child: Text('Public service')),
+              DropdownMenuItem(
+                  value: 'public_service', child: Text('Public service')),
             ],
             onChanged: (value) {
               if (value != null) setState(() => _type = value);
@@ -244,7 +249,9 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
           OutlinedButton.icon(
             onPressed: _saving ? null : () => _choose(true),
             icon: const Icon(Icons.add_photo_alternate_outlined),
-            label: Text(_before == null ? 'Add BEFORE photo (optional)' : 'Change BEFORE photo'),
+            label: Text(_before == null
+                ? 'Add BEFORE photo (optional)'
+                : 'Change BEFORE photo'),
           ),
           if (_before != null)
             Align(
@@ -257,7 +264,9 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
           OutlinedButton.icon(
             onPressed: _saving ? null : () => _choose(false),
             icon: const Icon(Icons.add_photo_alternate_outlined),
-            label: Text(_after == null ? 'Add AFTER photo (optional)' : 'Change AFTER photo'),
+            label: Text(_after == null
+                ? 'Add AFTER photo (optional)'
+                : 'Change AFTER photo'),
           ),
           if (_after != null)
             Align(

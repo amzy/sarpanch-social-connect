@@ -90,7 +90,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
           .call({'text': source});
       final hindi = (result.data as Map)['hindi'] as String?;
       if (hindi == null || hindi.trim().isEmpty) {
-        throw Exception('No Hindi suggestion was returned. Please enter the spelling manually.');
+        throw Exception(
+            'No Hindi suggestion was returned. Please enter the spelling manually.');
       }
       if (!mounted) return;
       setState(() {
@@ -217,9 +218,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   hintText: 'उदाहरण: उमर फारुख',
                   suffixIcon: IconButton(
                     tooltip: 'Convert English name to Hindi',
-                    onPressed: _transliteratingSarpanch ? null : () => _convertToHindi(sarpanch: true),
+                    onPressed: _transliteratingSarpanch
+                        ? null
+                        : () => _convertToHindi(sarpanch: true),
                     icon: _transliteratingSarpanch
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.translate),
                   ),
                 ),
@@ -234,9 +240,14 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
                   hintText: 'उदाहरण: गगवाना',
                   suffixIcon: IconButton(
                     tooltip: 'Convert English name to Hindi',
-                    onPressed: _transliteratingPanchayat ? null : () => _convertToHindi(sarpanch: false),
+                    onPressed: _transliteratingPanchayat
+                        ? null
+                        : () => _convertToHindi(sarpanch: false),
                     icon: _transliteratingPanchayat
-                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.translate),
                   ),
                 ),
