@@ -122,8 +122,8 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       _error = null;
     });
     try {
-      String imageUrl = '';
-      String sealUrl = '';
+      String imageUrl = (widget.initialProfile?['imageUrl'] as String?) ?? '';
+      String sealUrl = (widget.initialProfile?['sealUrl'] as String?) ?? '';
       if (_profileImage != null) {
         imageUrl = await _uploads.uploadFile(
           uid: user.uid,
