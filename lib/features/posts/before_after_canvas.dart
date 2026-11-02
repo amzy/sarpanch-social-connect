@@ -1,12 +1,12 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
 class BeforeAfterCanvas extends StatelessWidget {
   const BeforeAfterCanvas({
     super.key,
-    required this.beforeFile,
-    required this.afterFile,
+    required this.beforeBytes,
+    required this.afterBytes,
     required this.sarpanchName,
     required this.panchayatName,
     required this.sarpanchNameHindi,
@@ -18,8 +18,8 @@ class BeforeAfterCanvas extends StatelessWidget {
     this.frameStyle = 'classic',
   });
 
-  final File? beforeFile;
-  final File? afterFile;
+  final Uint8List? beforeBytes;
+  final Uint8List? afterBytes;
   final String sarpanchName;
   final String panchayatName;
   final String sarpanchNameHindi;
@@ -30,15 +30,15 @@ class BeforeAfterCanvas extends StatelessWidget {
   final bool stacked;
   final String frameStyle;
 
-  Widget _photo(File? file, String label) {
+  Widget _photo(Uint8List? bytes, String label) {
     return Expanded(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            if (file != null)
-              Image.file(file, fit: BoxFit.cover)
+            if (bytes != null)
+              Image.memory(bytes, fit: BoxFit.cover)
             else
               Container(
                 color: const Color(0xFFE7EDE9),
@@ -90,16 +90,16 @@ class BeforeAfterCanvas extends StatelessWidget {
     final images = stacked
         ? Column(
             children: [
-              _photo(beforeFile, 'BEFORE'),
+              _photo(beforeBytes, 'BEFORE'),
               const SizedBox(height: 8),
-              _photo(afterFile, 'AFTER'),
+              _photo(afterBytes, 'AFTER'),
             ],
           )
         : Row(
             children: [
-              _photo(beforeFile, 'BEFORE'),
+              _photo(beforeBytes, 'BEFORE'),
               const SizedBox(width: 8),
-              _photo(afterFile, 'AFTER'),
+              _photo(afterBytes, 'AFTER'),
             ],
           );
     return Material(
@@ -138,7 +138,7 @@ class BeforeAfterCanvas extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            if (beforeFile != null || afterFile != null)
+            if (beforeBytes != null || afterBytes != null)
               SizedBox(height: stacked ? 820 : 430, child: images)
             else
               Container(
