@@ -4,8 +4,8 @@ import 'package:sarpanch_social_connect/core/theme/app_theme.dart';
 
 void main() {
   group('Sarpanch Social Connect themes', () {
-    test('defines all six approved brand themes', () {
-      expect(AppThemeId.values, hasLength(6));
+    test('defines all seven approved brand themes', () {
+      expect(AppThemeId.values, hasLength(7));
       expect(brandPalettes.keys, containsAll(AppThemeId.values));
     });
 
