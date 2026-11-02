@@ -27,7 +27,7 @@ All endpoints except GET /health require Authorization: Bearer <Firebase ID toke
 | POST /api/social/credentials | Encrypt and store social tokens privately |
 | POST /api/admin/bootstrap | Allowlisted development-admin bootstrap |
 
-AI captions support English, Hindi, Marathi, Telugu, Tamil and Gujarati. Free users have three AI generations per India calendar month; refreshes count toward the same limit. Publishing is explicitly user-initiated after approval. Facebook supports text/image, Instagram requires an image, and X currently publishes text.
+AI captions support English, Hindi, Marathi, Telugu, Tamil and Gujarati. Free users have three initial AI caption generations per India calendar month; the existing five-refresh limit remains separate. Publishing is explicitly user-initiated after approval. Facebook supports text/image, Instagram requires an image, and X currently publishes text.
 
 ## One-time setup
 
