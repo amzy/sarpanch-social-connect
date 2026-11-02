@@ -115,7 +115,10 @@ class BackendApiService {
     });
   }
 
-  Future<void> saveSocialCredentials(Map<String, String> credentials) async {
-    await _post('/api/social/credentials', credentials);
+  Future<Map<String, dynamic>> getSocialSetup() =>
+      _post('/api/social/setup/read', const {});
+
+  Future<void> saveSocialSetup(Map<String, dynamic> profiles) async {
+    await _post('/api/social/setup', {'profiles': profiles});
   }
 }
