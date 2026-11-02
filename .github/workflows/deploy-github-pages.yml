@@ -3,7 +3,7 @@ name: Deploy Flutter web to GitHub Pages
 on:
   push:
     branches:
-      - feature/foundation-design-system
+      - main
   workflow_dispatch:
 
 permissions:
