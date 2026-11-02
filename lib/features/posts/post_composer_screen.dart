@@ -75,19 +75,22 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   }
 
   Future<Uint8List> _captureCanvas() async {
-    if (!mounted)
+    if (!mounted) {
       throw Exception('The post editor was closed before preview capture.');
+    }
     final profileUrl = (widget.profile['imageUrl'] as String?) ?? '';
     final sealUrl = (widget.profile['sealUrl'] as String?) ?? '';
     if (profileUrl.isNotEmpty) {
       await precacheImage(NetworkImage(profileUrl), context);
-      if (!mounted)
+      if (!mounted) {
         throw Exception('The post editor was closed before preview capture.');
+      }
     }
     if (sealUrl.isNotEmpty) {
       await precacheImage(NetworkImage(sealUrl), context);
-      if (!mounted)
+      if (!mounted) {
         throw Exception('The post editor was closed before preview capture.');
+      }
     }
     await WidgetsBinding.instance.endOfFrame;
     final boundary =
@@ -122,18 +125,20 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
     try {
       String beforeUrl = '';
       String afterUrl = '';
-      if (_before != null)
+      if (_before != null) {
         beforeUrl = await _uploads.uploadFile(
           uid: user.uid,
           path: 'users/${user.uid}/posts/$postId-before.jpg',
           file: XFile(_before!.path),
         );
-      if (_after != null)
+      }
+      if (_after != null) {
         afterUrl = await _uploads.uploadFile(
           uid: user.uid,
           path: 'users/${user.uid}/posts/$postId-after.jpg',
           file: XFile(_after!.path),
         );
+      }
       final bytes = await _captureCanvas();
       final imageUrl = await _uploads.uploadBytes(
         uid: user.uid,

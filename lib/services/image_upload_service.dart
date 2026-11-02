@@ -22,8 +22,9 @@ class ImageUploadService {
         minHeight: 720,
         format: CompressFormat.jpeg,
       );
-      if (compressed != null && await compressed.length() < maxBytes)
+      if (compressed != null && await compressed.length() < maxBytes) {
         return compressed;
+      }
     }
     if (compressed == null || await compressed.length() >= maxBytes) {
       throw Exception(
@@ -69,8 +70,9 @@ class ImageUploadService {
     }
     if (optimized.length >= maxBytes) {
       contentType = 'image/jpeg';
-      if (uploadPath.endsWith('.png'))
+      if (uploadPath.endsWith('.png')) {
         uploadPath = '${uploadPath.substring(0, uploadPath.length - 4)}.jpg';
+      }
       for (final quality in [82, 72, 62, 52, 42, 32]) {
         optimized = await FlutterImageCompress.compressWithList(
           bytes,
@@ -82,8 +84,9 @@ class ImageUploadService {
         if (optimized.length < maxBytes) break;
       }
     }
-    if (optimized.length >= maxBytes)
+    if (optimized.length >= maxBytes) {
       throw Exception('Composited image could not be compressed below 1 MB.');
+    }
     final ref = FirebaseStorage.instance.ref(uploadPath);
     await ref.putData(optimized, SettableMetadata(contentType: contentType));
     return ref.getDownloadURL();

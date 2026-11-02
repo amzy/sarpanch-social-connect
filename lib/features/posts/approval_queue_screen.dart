@@ -17,12 +17,14 @@ class ApprovalQueueScreen extends StatelessWidget {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: stream,
       builder: (context, snapshot) {
-        if (snapshot.hasError)
+        if (snapshot.hasError) {
           return Center(
             child: Text('Unable to load approval queue: ${snapshot.error}'),
           );
-        if (!snapshot.hasData)
+        }
+        if (!snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
+        }
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) return Center(child: Text(strings.noPendingPosts));
         return ListView.builder(

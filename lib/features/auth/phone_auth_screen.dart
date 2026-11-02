@@ -54,7 +54,11 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
 
   Future<void> _submit() async {
     if (!_form.currentState!.validate()) return;
-    setState(() => {_busy = true, _error = null, _notice = null});
+    setState(() {
+      _busy = true;
+      _error = null;
+      _notice = null;
+    });
     try {
       final auth = FirebaseAuth.instance,
           email = _email.text.trim().toLowerCase();
@@ -76,8 +80,9 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
             final claim = FirebaseFirestore.instance
                 .collection('username_claims')
                 .doc(username);
-            if ((await tx.get(claim)).exists)
+            if ((await tx.get(claim)).exists) {
               throw StateError('Username already taken. Choose another.');
+            }
             tx.set(claim, {
               'uid': user.uid,
               'createdAt': FieldValue.serverTimestamp(),
@@ -107,11 +112,12 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
           debugPrint('Email verification message could not be sent: $error');
         }
         await auth.signOut();
-        if (mounted)
+        if (mounted) {
           setState(
             () => _notice =
                 'Account created. You can now sign in. A verification email was sent if email delivery is enabled.',
           );
+        }
       }
     } on FirebaseAuthException catch (e) {
       final msg = switch (e.code) {
@@ -124,12 +130,13 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
           'Email or password is incorrect.',
         'too-many-requests' => 'Too many attempts. Try again later.',
         'network-request-failed' => 'Check your internet connection.',
-        _ => e.message ?? 'Authentication failed: ' + e.code,
+        _ => e.message ?? 'Authentication failed: ${e.code}',
       };
       if (mounted) setState(() => _error = msg);
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error = e.toString().replaceFirst('Bad state: ', ''));
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -141,16 +148,21 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
       setState(() => _error = validation);
       return;
     }
-    setState(() => {_busy = true, _error = null});
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
       await FirebaseAuth.instance.sendPasswordResetEmail(
         email: _email.text.trim(),
       );
-      if (mounted)
+      if (mounted) {
         setState(() => _notice = 'Password reset link sent. Check your email.');
+      }
     } on FirebaseAuthException catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error = e.message ?? 'Unable to send reset email.');
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -304,10 +316,10 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                       onPressed: _busy
                           ? null
                           : () => setState(
-                                () => {
-                                  _register = !_register,
-                                  _error = null,
-                                  _notice = null,
+                                () {
+                                  _register = !_register;
+                                  _error = null;
+                                  _notice = null;
                                 },
                               ),
                       child: Text(

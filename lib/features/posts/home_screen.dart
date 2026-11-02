@@ -18,13 +18,15 @@ class HomeScreen extends StatelessWidget {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: ProfileRepository().watchProfile(uid),
       builder: (context, snapshot) {
-        if (!snapshot.hasData)
+        if (!snapshot.hasData) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
+        }
         if (!snapshot.data!.exists ||
-            snapshot.data!.data()?['profileComplete'] != true)
+            snapshot.data!.data()?['profileComplete'] != true) {
           return const ProfileSetupScreen();
+        }
         final profile = snapshot.data!.data()!;
         return _HomeContent(profile: profile);
       },

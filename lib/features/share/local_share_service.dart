@@ -17,8 +17,9 @@ class LocalShareService {
     if (bytes == null) throw Exception('Unable to download the final image.');
     final hasGalleryAccess = await Gal.hasAccess();
     if (!hasGalleryAccess) await Gal.requestAccess();
-    if (!await Gal.hasAccess())
+    if (!await Gal.hasAccess()) {
       throw Exception('Photo library permission was not granted.');
+    }
     await Gal.putImageBytes(bytes, album: 'Sarpanch Social Connect');
     final isPng = bytes.length > 8 &&
         bytes[0] == 0x89 &&
