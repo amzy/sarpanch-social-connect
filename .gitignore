@@ -17,3 +17,6 @@ android/local.properties
 ios/Flutter/Generated.xcconfig
 lib/firebase_options.dart
 coverage/
+
+worker/node_modules/
+worker/.dev.vars

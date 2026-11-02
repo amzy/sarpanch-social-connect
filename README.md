@@ -1,105 +1,104 @@
 # Sarpanch Social Connect
 
-AI-assisted, approval-first social publishing for Gram Panchayats. Flutter (Android-first/iOS-compatible) + Firebase + Gemini.
+Approval-first social publishing for Gram Panchayats. Flutter + Firebase Spark + one Cloudflare Worker + Gemini API.
 
 ## Architecture
 
-- Flutter feature-first app with Riverpod, Firebase Auth, Firestore, Storage, image compression and share intents.
-- Cloud Functions v2 (Node.js 22 + TypeScript) for AI generation, usage enforcement, credential encryption and publishing dispatch.
-- Firestore documents follow the requested `users` and `posts_queue` field names. Social credentials are deliberately kept in a separate server-only document and encrypted with Cloud KMS; they are never placed in the client-readable user profile.
-- Multi-tenant isolation is enforced by Firebase rules using the authenticated UID.
+- Flutter: Android, iOS and GitHub Pages web app.
+- Firebase Spark: Phone Authentication, Firestore and Storage.
+- Cloudflare Workers Free: one TypeScript HTTPS API for Gemini, authorization, captions, transliteration and social publishing.
+- Gemini API: captions and Hindi transliteration. The key stays in Worker secrets.
+- No Firebase Cloud Functions, no Blaze upgrade, no D1, no Queues and no Cloud KMS.
 
-## Repository structure
+The Worker verifies Firebase ID tokens through Firebase Authentication accounts:lookup. Privileged Firestore writes use a dedicated Google service account with the Cloud Datastore User role. Store its JSON key only as a Worker secret. Firestore rules deny client access to private social credentials and admin records.
 
-```text
-lib/
-  core/                 app theme, localization, Firebase bootstrap
-  features/auth/        phone OTP sign-in
-  features/profile/     Sarpanch and Panchayat profile
-  features/posts/       composer, before/after canvas, approval queue
-  features/share/       local share intent
-  services/             image compression and retry queue
-functions/src/          AI, billing, KMS credentials, Meta/X dispatch
-firestore.rules         tenant isolation and field-level writes
-storage.rules           user-owned object paths
-firebase.json           Firebase deployment configuration
-```
+## Worker endpoints
 
-## Prerequisites
+All endpoints except GET /health require Authorization: Bearer <Firebase ID token>.
 
-- Flutter stable with Android and iOS toolchains
-- Node.js 22 and npm
-- Firebase CLI (`npm i -g firebase-tools`)
-- A Firebase project with Authentication (Phone), Firestore, Storage, Cloud Functions v2 and Secret Manager enabled
-- Gemini API key
-- Cloud KMS key ring/key for encrypting per-user social credentials
-- Meta app with Facebook Page and Instagram Graph API permissions; X developer app with user-context write access
+| Endpoint | Purpose |
+|---|---|
+| POST /api/posts/generate | Generate three captions for an owned pending_ai post |
+| POST /api/posts/more-options | Generate three new captions; maximum five refreshes |
+| POST /api/profile/transliterate | Transliterate an Indian name into Devanagari |
+| POST /api/posts/approve-and-publish | Save edited caption, approve and publish |
+| POST /api/posts/reject | Reject an owned pending post |
+| POST /api/posts/retry | Retry AI generation or failed social publishing |
+| POST /api/social/credentials | Encrypt and store social tokens privately |
+| POST /api/admin/bootstrap | Allowlisted development-admin bootstrap |
 
-## Configure
+AI captions support English, Hindi, Marathi, Telugu, Tamil and Gujarati. Free users have three initial AI caption generations per India calendar month; the existing five-refresh limit remains separate. Publishing is explicitly user-initiated after approval. Facebook supports text/image, Instagram requires an image, and X currently publishes text.
 
-1. Create a Firebase project and run `firebase login`.
-2. Run `flutter create --platforms=android,ios .` to generate platform projects if they are not present, then run `flutterfire configure --project=<your-project-id>` from the repository root. This replaces the placeholder `lib/firebase_options.dart` with project-specific options.
-3. Set the project alias: `firebase use --add`.
-4. Set function secrets and parameters:
+## One-time setup
+
+### Firebase Spark
+
+Keep the project on Spark. Enable Phone Authentication, Firestore and Storage. Do not deploy Functions.
+
+Create a dedicated service account in the existing Google Cloud project, for example sarpanch-worker-firestore. Grant only Cloud Datastore User (roles/datastore.user). Create a JSON key. The Worker uses it for Firestore REST operations. Do not grant Owner or Editor.
+
+Copy the Firebase Web API key from lib/firebase_options.dart (web apiKey).
+
+### Cloudflare Worker Free
+
+From worker/:
 
 ```bash
-firebase functions:secrets:set GEMINI_API_KEY
-firebase functions:secrets:set KMS_KEY_NAME
+npm install
+npx wrangler login
+npx wrangler secret put FIREBASE_WEB_API_KEY
+npx wrangler secret put GOOGLE_SERVICE_ACCOUNT_JSON
+npx wrangler secret put GEMINI_API_KEY
+openssl rand -base64 32
+npx wrangler secret put SOCIAL_ENCRYPTION_KEY
+npx wrangler secret put ADMIN_BOOTSTRAP_UID
+npm run check
+npm run deploy
 ```
 
-`KMS_KEY_NAME` must be a fully qualified Cloud KMS CryptoKey resource. Grant the deployed Functions service account permission to encrypt/decrypt with that key. Set `META_GRAPH_VERSION` in an untracked `.env.<project-id>` file to the currently supported Graph API version enabled for your Meta app (for example, `META_GRAPH_VERSION=vXX.0`).
+For GOOGLE_SERVICE_ACCOUNT_JSON, enter the complete service-account JSON as one value. For SOCIAL_ENCRYPTION_KEY, use the output of openssl rand -base64 32. ADMIN_BOOTSTRAP_UID is only needed for the one-time development admin bootstrap; remove it afterward.
 
-5. Install dependencies:
+Set META_GRAPH_VERSION in worker/wrangler.toml to a Graph API version supported by your Meta app. The Worker URL will be https://sarpanch-social-connect-api.<your-subdomain>.workers.dev.
+
+### Firebase rules
+
+Deploy only the products still in use:
+
+```bash
+firebase deploy --only firestore:rules,storage
+```
+
+Do not deploy Functions. Confirm Firebase Console remains on Spark.
+
+### Flutter
 
 ```bash
 flutter pub get
-cd functions && npm install && npm run build && npm test
+flutter run -d chrome --dart-define=BACKEND_API_URL=https://sarpanch-social-connect-api.<your-subdomain>.workers.dev
 ```
 
-6. Deploy rules and functions:
-
-```bash
-firebase deploy --only firestore:rules,storage,functions
-```
-
-7. Run the app:
-
-```bash
-flutter run
-```
+Pass the same BACKEND_API_URL define to the GitHub Pages Flutter build and Android/iOS builds. This URL is public configuration, not a secret.
 
 ## Social credentials
 
-The client must not write access tokens to `users/{uid}`. After a provider OAuth flow, send tokens to the authenticated callable `saveSocialCredentials` (accepts `facebookPageToken`, `facebookPageId`, `instagramId`, and `twitterToken`). The function encrypts access tokens with Cloud KMS and stores ciphertext at `users/{uid}/private/socialTokens`; non-secret provider IDs are stored as identifiers. Firestore rules deny all client reads/writes to this private path. This scaffold does not implement Meta/X OAuth consent screens or token refresh; those provider-specific OAuth flows must be configured before production publishing.
+The Worker accepts Facebook Page token/Page ID, Instagram account ID and X bearer token. Access tokens are encrypted with AES-GCM using the Worker-only SOCIAL_ENCRYPTION_KEY and stored at users/{uid}/private/socialTokens. Flutter cannot read this document.
 
-## Important product behavior
+Provider OAuth consent and token refresh are not yet implemented. Until then, credentials must be supplied through a trusted authenticated integration using the Worker endpoint. Never put provider tokens in Flutter or public profile documents.
 
-- Free plan: three AI generations per calendar month (Asia/Kolkata). Premium with `billingStatus == active` has no generation cap and may use direct publishing.
-- Every AI caption moves to `pending_approval`; the app never auto-publishes an AI-generated caption.
-- Publishing only starts on the explicit `approved_to_publish` transition and only for Premium accounts. Facebook and Instagram publish the composited image; the current X adapter publishes caption text only.
-- Firestore events are at-least-once. Function handlers use transactional claims/idempotency markers and should be treated as retryable.
-- Image selection/compression happens locally; the app targets a maximum of 1 MB per uploaded image.
-- Firestore persistence is enabled where supported. Failed image/post submissions are recorded in a local retry queue.
-- WhatsApp broadcast is a manual share workflow; the app saves the final image to the device gallery, copies the caption and opens the native share sheet with the image attached.
+## Limits and safety
 
-## Validation status
+- Cloudflare, Gemini, Meta and X each have independent quotas and policies.
+- This request-driven design does not promise unattended scheduled publishing.
+- Firestore update-time preconditions reject stale concurrent writes. A client disconnect can still occur after an external API has started processing.
+- Service-account JSON, Gemini keys, social tokens and encryption keys must never be committed or pasted into chat.
+- Firebase Cloud Functions source and deployment configuration are removed from this branch.
 
-This is a generated project scaffold. It has not been connected to a real Firebase project, provider OAuth apps, billing provider, or KMS key. Run the setup and verification commands above before deployment. Never commit Firebase service-account keys, provider tokens, or generated Firebase configuration containing environment-specific credentials.
+## Checks
 
-
-## Current development baseline
-
-The active implementation branch is `feature/foundation-design-system`.
-
-### Foundation work started
-- Centralized six-color theme palette: Government Blue, Gram Green, Saffron Orange, Royal Purple, Teal Cyan and Crimson Red.
-- Light, dark and follow-system appearance modes.
-- Persisted appearance preferences.
-- English-only app interface, with post content language kept as a separate profile/post setting.
-- Appearance settings screen linked from the signed-in app bar.
-- Design-system and phased development documentation.
-
-See [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md) and [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md).
-
-### Development status
-This is the first foundation milestone, not a production release. Firebase project configuration, Flutter platform generation, device testing and automated test execution are still required before deployment.
+```bash
+flutter pub get
+dart format --output=none --set-exit-if-changed lib
+flutter analyze
+flutter test
+cd worker && npm install && npm run check
+```

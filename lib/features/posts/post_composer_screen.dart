@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/image_upload_service.dart';
+import '../../services/backend_api_service.dart';
 import '../../services/retry_queue_service.dart';
 import 'before_after_canvas.dart';
 import 'data/post_repository.dart';
@@ -134,6 +135,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
       _error = null;
     });
     final postId = const Uuid().v4();
+    var postCreated = false;
     try {
       String beforeUrl = '';
       String afterUrl = '';
@@ -172,20 +174,29 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         'status': 'pending_ai',
         'scheduledTime': null,
       });
+      postCreated = true;
+      try {
+        await BackendApiService().generatePost(postId);
+      } catch (_) {
+        await BackendApiService().retryPost(postId);
+      }
       if (mounted) Navigator.of(context).pop();
     } catch (error) {
-      await _retryQueue.enqueue({
-        'kind': 'post_submission',
-        'postId': postId,
-        'type': _type,
-        'rawNotes': _notes.text.trim(),
-        'beforePath': _before?.path,
-        'afterPath': _after?.path,
-        'error': error.toString(),
-      });
+      if (!postCreated) {
+        await _retryQueue.enqueue({
+          'kind': 'post_submission',
+          'postId': postId,
+          'type': _type,
+          'rawNotes': _notes.text.trim(),
+          'beforePath': _before?.path,
+          'afterPath': _after?.path,
+          'error': error.toString(),
+        });
+      }
       setState(
-        () => _error =
-            'Could not submit. Your retry record is saved on this device. $error',
+        () => _error = postCreated
+            ? 'Your post is saved, but caption generation could not be confirmed. Check the Failed tab or retry shortly. $error'
+            : 'Could not submit. Your retry record is saved on this device. $error',
       );
     } finally {
       if (mounted) setState(() => _saving = false);

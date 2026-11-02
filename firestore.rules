@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function owns(uid) { return signedIn() && request.auth.uid == uid; }
-    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function isAdmin() { return signedIn() && (request.auth.token.admin == true || exists(/databases/$(database)/documents/admins/$(request.auth.uid))); }
     function validPostType(type) { return type in ['festival', 'development', 'announcement', 'project', 'event', 'public_service']; }
     function validClientPostCreate(postId) {
       return request.resource.data.keys().hasOnly([
@@ -37,6 +37,10 @@ service cloud.firestore {
         'primaryLanguage', 'imageUrl', 'sealUrl', 'createdAt',
         'plan', 'billingStatus'
       ]);
+    }
+
+    match /admins/{uid} {
+      allow read, write: if false;
     }
 
     match /username_claims/{username} {

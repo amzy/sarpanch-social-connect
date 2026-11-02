@@ -32,7 +32,7 @@ jobs:
         run: flutter pub get
 
       - name: Build web release
-        run: flutter build web --release --base-href "/sarpanch-social-connect/"
+        run: flutter build web --release --base-href "/sarpanch-social-connect/" --dart-define=BACKEND_API_URL=${{ vars.BACKEND_API_URL }}
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
