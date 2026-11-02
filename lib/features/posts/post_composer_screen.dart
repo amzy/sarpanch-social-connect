@@ -326,7 +326,6 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
             style: Theme.of(context).textTheme.bodySmall,
           ),
           OutlinedButton.icon(
-          OutlinedButton.icon(
             onPressed: _saving ? null : _suggestFrame,
             icon: const Icon(Icons.auto_awesome),
             label: const Text('Suggest frame with AI'),
