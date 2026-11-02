@@ -18,7 +18,8 @@ All endpoints except GET /health require Authorization: Bearer <Firebase ID toke
 
 | Endpoint | Purpose |
 |---|---|
-| POST /api/posts/generate | Generate three captions for an owned pending_ai post |\n| POST /api/media/upload | Authenticated owner-scoped upload to Cloudflare R2 |
+| POST /api/posts/generate | Generate three captions for an owned pending_ai post |
+| POST /api/media/upload | Authenticated owner-scoped upload to Cloudflare R2 |
 | POST /api/posts/more-options | Generate three new captions; maximum five refreshes |
 | POST /api/profile/transliterate | Transliterate an Indian name into Devanagari |
 | POST /api/posts/approve-and-publish | Save edited caption, approve and publish |
@@ -39,7 +40,9 @@ Create a dedicated service account in the existing Google Cloud project, for exa
 
 Copy the Firebase Web API key from lib/firebase_options.dart (web apiKey).
 
-### Cloudflare Worker Free\n\nCreate an R2 bucket named `sarpanch-social-connect-media` in the Cloudflare dashboard (R2 free tier quotas apply). The Worker serves saved images through its `/media/` route; no public bucket access is required.
+### Cloudflare Worker Free
+
+Create an R2 bucket named `sarpanch-social-connect-media` in the Cloudflare dashboard (R2 free tier quotas apply). The Worker serves saved images through its `/media/` route; no public bucket access is required.
 
 From worker/:
 
