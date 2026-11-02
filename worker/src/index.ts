@@ -12,7 +12,6 @@ export interface Env {
 type Json = Record<string, unknown>;
 type FirestoreDocument = { name: string; fields?: Record<string, unknown>; updateTime?: string };
 const LANGUAGES = new Set(["English", "Hindi", "Marathi", "Telugu", "Tamil", "Gujarati"]);
-const POST_TYPES = new Set(["festival", "development", "announcement", "project", "event", "public_service"]);
 const encoder = new TextEncoder();
 let cachedAccessToken: { token: string; expiresAt: number } | undefined;
 
@@ -150,24 +149,6 @@ function monthKey(): string {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit" }).formatToParts(new Date());
   return `${parts.find(p => p.type === "year")?.value}-${parts.find(p => p.type === "month")?.value}`;
 }
-async function claimAi(env: Env, uid: string, post: { data: Json; updateTime: string }, allowedStatus: string): Promise<{ post: Json; user: Json; userUpdateTime: string }> {
-  if (post.data.status !== allowedStatus) fail("Post is not in the expected state.", 409);
-  const user = await getDoc(env, `users/${uid}`);
-  if (user.data.billingStatus !== "active") fail("Your account is not active for AI generation.", 403);
-  const plan = String(user.data.plan ?? "free").toLowerCase();
-  const usage = (user.data.usage ?? {}) as Json;
-  const aiUsage = (usage.aiGenerations ?? {}) as Json;
-  const month = monthKey();
-  const count = Number(aiUsage[month] ?? 0);
-  if (plan !== "premium" && count >= 3) fail("FREE_MONTHLY_LIMIT_REACHED", 429);
-  await patchDoc(env, `users/${uid}`, {
-    usage: { ...usage, aiGenerations: { ...aiUsage, [month]: count + 1 }, lastAiGenerationAt: { __timestamp: new Date().toISOString() } },
-  }, user.updateTime);
-  await patchDoc(env, `posts_queue/${String(post.data.postId)}`, {
-    status: "processing_ai", aiUsageClaimed: true, aiUsageMonth: month,
-  }, post.updateTime);
-  return { post: post.data, user: user.data, userUpdateTime: user.updateTime };
-}
 function captionPrompt(post: Json, user: Json, language: string, refresh = false): string {
   return [
     "Act as a professional public relations writer for an Indian village Gram Panchayat Sarpanch.",
@@ -199,7 +180,7 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
   const usage = (user.data.usage ?? {}) as Json;
   const aiUsage = (usage.aiGenerations ?? {}) as Json;
   const month = monthKey();
-  if (plan !== "premium" && Number(aiUsage[month] ?? 0) >= 3) {
+  if (!refresh && plan !== "premium" && Number(aiUsage[month] ?? 0) >= 3) {
     await patchDoc(env, path, { status: "failed", failureCode: "FREE_MONTHLY_LIMIT_REACHED" }, current.updateTime);
     fail("FREE_MONTHLY_LIMIT_REACHED", 429);
   }
@@ -209,9 +190,11 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
     await patchDoc(env, path, { status: "processing_ai" }, current.updateTime);
   }
   try {
-    await patchDoc(env, `users/${uid}`, {
-      usage: { ...usage, aiGenerations: { ...aiUsage, [month]: Number(aiUsage[month] ?? 0) + 1 }, lastAiGenerationAt: { __timestamp: new Date().toISOString() } },
-    }, user.updateTime);
+    if (!refresh) {
+      await patchDoc(env, `users/${uid}`, {
+        usage: { ...usage, aiGenerations: { ...aiUsage, [month]: Number(aiUsage[month] ?? 0) + 1 }, lastAiGenerationAt: { __timestamp: new Date().toISOString() } },
+      }, user.updateTime);
+    }
     const text = await gemini(env, captionPrompt(current.data, user.data, language, refresh));
     const parsed = jsonFromModel(text) as { captions?: unknown };
     const captions = Array.isArray(parsed.captions) ? parsed.captions.map(String).map(s => s.trim()).filter(Boolean).slice(0, 3) : [];
@@ -325,7 +308,12 @@ async function publish(env: Env, uid: string, postId: string): Promise<Json> {
 }
 async function handle(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
-  const origin = request.headers.get("origin") ?? "*";
+  const requestOrigin = request.headers.get("origin");
+  const allowedOrigins = (env.ALLOWED_ORIGINS ?? "").split(",").map(value => value.trim()).filter(Boolean);
+  if (requestOrigin && allowedOrigins.length > 0 && !allowedOrigins.includes(requestOrigin)) {
+    return response({ error: "Origin not allowed." }, 403, "null");
+  }
+  const origin = requestOrigin ?? "*";
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: {
     "access-control-allow-origin": origin, "access-control-allow-methods": "GET, POST, OPTIONS",
     "access-control-allow-headers": "authorization, content-type", "access-control-max-age": "86400",
