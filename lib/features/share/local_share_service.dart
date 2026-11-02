@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:cross_file/cross_file.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:gal/gal.dart';
