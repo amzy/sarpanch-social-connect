@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+import '../../services/backend_api_service.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/image_upload_service.dart';
@@ -85,10 +85,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
       _error = null;
     });
     try {
-      final result = await FirebaseFunctions.instanceFor(region: 'asia-south1')
-          .httpsCallable('transliterateNameToHindi')
-          .call({'text': source});
-      final hindi = (result.data as Map)['hindi'] as String?;
+      final hindi = await BackendApiService().transliterateName(source);
       if (hindi == null || hindi.trim().isEmpty) {
         throw Exception(
             'No Hindi suggestion was returned. Please enter the spelling manually.');
