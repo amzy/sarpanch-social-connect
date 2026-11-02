@@ -143,13 +143,15 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
     } on FirebaseException catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Firebase ${e.plugin} failed [${e.code}]: ${e.message ?? 'No additional details were provided.'}';
+          _error =
+              'Firebase ${e.plugin} failed [${e.code}]: ${e.message ?? 'No additional details were provided.'}';
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Unexpected sign-in/registration error: ${e.toString().replaceFirst('Bad state: ', '')}';
+          _error =
+              'Unexpected sign-in/registration error: ${e.toString().replaceFirst('Bad state: ', '')}';
         });
       }
     } finally {
