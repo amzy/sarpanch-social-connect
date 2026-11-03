@@ -81,10 +81,10 @@ async function verifyUser(request: Request, env: Env): Promise<{ uid: string; ph
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ idToken: authorization.slice(7) }),
   });
-  const result = await lookup.json() as {
+  const result = await parseJsonResponse<{
     users?: Array<{ localId?: string; phoneNumber?: string }>;
     error?: { message?: string; status?: string; errors?: Array<{ message?: string; reason?: string }> };
-  };
+  }>(lookup, "Firebase Identity Toolkit");
   const user = result.users?.[0];
   if (!lookup.ok || !user?.localId) {
     const reason = result.error?.message ??
