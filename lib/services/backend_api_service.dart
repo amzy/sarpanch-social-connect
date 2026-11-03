@@ -54,8 +54,16 @@ class BackendApiService {
       // Preserve the HTTP status in the user-facing error below.
     }
     if (result.statusCode < 200 || result.statusCode >= 300) {
-      throw Exception(data['error']?.toString() ??
-          'Backend request failed (${result.statusCode}).');
+      final message = data['error']?.toString() ??
+          'Backend request failed (${result.statusCode}).';
+      final requestId = data['requestId']?.toString();
+      final stage = data['stage']?.toString();
+      final diagnostic = [
+        if (stage != null && stage.isNotEmpty) 'stage=$stage',
+        if (requestId != null && requestId.isNotEmpty) 'requestId=$requestId',
+        'HTTP ${result.statusCode}',
+      ].join(', ');
+      throw Exception('$message ($diagnostic)');
     }
     return data;
   }
@@ -82,7 +90,11 @@ class BackendApiService {
   }
 
   Future<List<String>> generatePost(String postId) async {
-    final data = await _post('/api/posts/generate', {'postId': postId});
+    final requestId = 'post-${DateTime.now().microsecondsSinceEpoch}';
+    final data = await _post('/api/posts/generate', {
+      'postId': postId,
+      'requestId': requestId,
+    });
     return (data['captions'] as List? ?? const [])
         .map((e) => e.toString())
         .toList();
