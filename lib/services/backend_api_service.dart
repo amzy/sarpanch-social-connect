@@ -89,6 +89,21 @@ class BackendApiService {
     return url;
   }
 
+  Future<String> generatePostArtwork({
+    required String postType,
+    required String notes,
+  }) async {
+    final data = await _post('/api/posts/generate-image', {
+      'postType': postType,
+      'notes': notes,
+    });
+    final url = data['imageUrl']?.toString() ?? '';
+    if (url.isEmpty) {
+      throw StateError('The image generator did not return an artwork URL.');
+    }
+    return url;
+  }
+
   Future<List<String>> generatePost(String postId) async {
     final requestId = 'post-${DateTime.now().microsecondsSinceEpoch}';
     final data = await _post('/api/posts/generate', {

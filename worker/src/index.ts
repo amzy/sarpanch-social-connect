@@ -504,6 +504,44 @@ async function handle(request: Request, env: Env): Promise<Response> {
       const result = await generateForPost(env, user.uid, postId, true, trace);
       return response({ ...result, requestId }, 200, origin);
     }
+    if (url.pathname === "/api/posts/generate-image") {
+      const postType = String(body.postType ?? "");
+      const notes = String(body.notes ?? "").trim();
+      if (!POST_TYPES.has(postType)) fail("Choose a valid post type.");
+      if (!notes || notes.length > 5000) fail("Post details must be between 1 and 5000 characters.");
+      const profile = await getDoc(env, `users/${user.uid}`);
+      const name = String(profile.data.sarpanchNameHindi || profile.data.sarpanchName || "Sarpanch");
+      const panchayat = String(profile.data.panchayatNameHindi || profile.data.panchayatName || "Gram Panchayat");
+      const district = String(profile.data.district || "");
+      const state = String(profile.data.state || "");
+      const prompt = [
+        "Create a premium, modern Indian Gram Panchayat social-media poster artwork in a stylish hand-sketched editorial illustration style.",
+        "Portrait 4:5 composition, rich layered pencil and ink textures, refined watercolor washes, contemporary graphic design, strong visual hierarchy, warm natural light and polished print finish.",
+        "The central scene must visually communicate the supplied community update. Use a dignified, welcoming rural Indian setting and culturally appropriate details.",
+        "Leave clean negative space for typography to be added by the app. Do not render any letters, words, numbers, logos, watermarks, seals, flags, political party symbols or fake official marks.",
+        "Do not invent facts, completed works, public benefits or achievements. Depict the topic as an illustrative concept, not as documentary proof.",
+        "Sarpanch profile context: " + name + ". Gram Panchayat: " + panchayat + ". Location: " + [district, state].filter(Boolean).join(", ") + ".",
+        "Post category: " + postType + ".",
+        "Content prompt: " + notes,
+      ].join("\n");
+      let generated: any;
+      try {
+        generated = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", { prompt });
+      } catch (error) {
+        throw new Error("Cloudflare image generation failed: " + (error instanceof Error ? error.message : String(error)).slice(0, 260));
+      }
+      if (typeof generated?.image !== "string" || !generated.image) {
+        throw new Error("Cloudflare image model returned no image data.");
+      }
+      const imageBytes = fromB64(generated.image);
+      if (imageBytes.byteLength === 0 || imageBytes.byteLength > 8 * 1024 * 1024) {
+        fail("Generated artwork is empty or exceeds the 8 MB media limit.", 502);
+      }
+      const key = `${user.uid}/artwork/${crypto.randomUUID()}.jpg`;
+      await env.MEDIA_BUCKET.put(key, arrayBuffer(imageBytes), { metadata: { contentType: "image/jpeg" } });
+      const imageUrl = new URL("/media/" + key.split("/").map(encodeURIComponent).join("/"), request.url).toString();
+      return response({ imageUrl, model: "@cf/black-forest-labs/flux-1-schnell" }, 200, origin);
+    }
     if (url.pathname === "/api/posts/suggest-frame") {
       const postType = String(body.postType ?? "");
       const notes = String(body.notes ?? "").trim();

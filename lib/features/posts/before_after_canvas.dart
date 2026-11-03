@@ -16,6 +16,7 @@ class BeforeAfterCanvas extends StatelessWidget {
     required this.notes,
     this.stacked = false,
     this.frameStyle = 'classic',
+    this.generatedArtworkUrl = '',
   });
 
   final Uint8List? beforeBytes;
@@ -29,6 +30,7 @@ class BeforeAfterCanvas extends StatelessWidget {
   final String notes;
   final bool stacked;
   final String frameStyle;
+  final String generatedArtworkUrl;
 
   Widget _photo(Uint8List? bytes, String label) {
     return Expanded(
@@ -141,18 +143,64 @@ class BeforeAfterCanvas extends StatelessWidget {
             if (beforeBytes != null || afterBytes != null)
               SizedBox(height: stacked ? 820 : 430, child: images)
             else
-              Container(
-                height: 350,
-                alignment: Alignment.center,
-                padding: const EdgeInsets.all(24),
-                color: const Color(0xFFF0F5F1),
-                child: Text(
-                  notes,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 30,
-                    color: Color(0xFF173E32),
-                    fontWeight: FontWeight.w600,
+              SizedBox(
+                height: 430,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (generatedArtworkUrl.isNotEmpty)
+                        Image.network(generatedArtworkUrl, fit: BoxFit.cover)
+                      else
+                        const ColoredBox(color: Color(0xFFF0F5F1)),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.08),
+                              Colors.black.withValues(alpha: 0.68),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 22,
+                        right: 22,
+                        bottom: 22,
+                        child: Text(
+                          notes,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.left,
+                          style: const TextStyle(
+                            fontSize: 30,
+                            height: 1.15,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            shadows: [Shadow(color: Colors.black54, blurRadius: 8)],
+                          ),
+                        ),
+                      ),
+                      if (profileImageUrl.isNotEmpty)
+                        Positioned(
+                          top: 18,
+                          left: 18,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: CircleAvatar(
+                              radius: 54,
+                              backgroundImage: NetworkImage(profileImageUrl),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
