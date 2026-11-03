@@ -9,7 +9,7 @@ export interface Env {
   ALLOWED_ORIGINS?: string;
   MEDIA_BUCKET: {
     put(key: string, value: ArrayBuffer, options?: { metadata?: { contentType: string } }): Promise<void>;
-    get(key: string, type: "arrayBuffer"): Promise<{ value: ArrayBuffer; metadata?: { contentType?: string } } | null>;
+    getWithMetadata(key: string, type: "arrayBuffer"): Promise<{ value: ArrayBuffer | null; metadata: { contentType?: string } | null }>;
   };
 }
 
@@ -355,8 +355,8 @@ async function handle(request: Request, env: Env): Promise<Response> {
   if (url.pathname.startsWith("/media/") && request.method === "GET") {
     const key = decodeURIComponent(url.pathname.slice("/media/".length));
     if (!/^[A-Za-z0-9_-]{1,128}\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_.-]{1,160}$/.test(key)) return new Response("Not found", { status: 404 });
-    const object = await env.MEDIA_BUCKET.get(key, "arrayBuffer");
-    if (!object) return new Response("Not found", { status: 404 });
+    const object = await env.MEDIA_BUCKET.getWithMetadata(key, "arrayBuffer");
+    if (!object.value) return new Response("Not found", { status: 404 });
     return new Response(object.value, { headers: {
       "content-type": object.metadata?.contentType ?? "application/octet-stream",
       "cache-control": "public, max-age=31536000, immutable",
