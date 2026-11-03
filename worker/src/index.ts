@@ -255,8 +255,9 @@ function captionPrompt(post: Json, user: Json, language: string, refresh = false
     "Details: " + String(post.promptNotes ?? post.rawNotes ?? "").trim(),
   ].filter(Boolean).join("\n");
 }
-async function generateForPost(env: Env, uid: string, postId: string, refresh: boolean): Promise<Json> {
+async function generateForPost(env: Env, uid: string, postId: string, refresh: boolean, trace: { requestId: string; stage: string }): Promise<Json> {
   const path = `posts_queue/${postId}`;
+  trace.stage = "read_post";
   const current = await getDoc(env, path);
   if (current.data.uid !== uid) fail("Post not found.", 404);
   if (!POST_TYPES.has(String(current.data.type ?? ""))) fail("Unsupported post type.", 400);
@@ -267,6 +268,7 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
   } else {
     if (current.data.status !== "pending_ai") fail("Post is not waiting for AI generation.", 409);
   }
+  trace.stage = "read_user";
   const user = await getDoc(env, `users/${uid}`);
   if (user.data.billingStatus !== "active") {
     if (!refresh) await patchDoc(env, path, { status: "failed", failureCode: "BILLING_INACTIVE" }, current.updateTime);
@@ -286,6 +288,7 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
     await patchDoc(env, path, { status: "failed", failureCode: "FREE_MONTHLY_LIMIT_REACHED" }, current.updateTime);
     fail("FREE_MONTHLY_LIMIT_REACHED", 429);
   }
+  trace.stage = "set_processing_status";
   if (refresh) {
     await patchDoc(env, path, { status: "generating_more" }, current.updateTime);
   } else {
@@ -293,6 +296,7 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
   }
   try {
     if (!refresh && !alreadyClaimed) {
+      trace.stage = "claim_monthly_usage";
       await patchDoc(env, `users/${uid}`, {
         usage: { ...usage, aiGenerations: { ...aiUsage, [month]: Number(aiUsage[month] ?? 0) + 1 }, lastAiGenerationAt: { __timestamp: new Date().toISOString() } },
       }, user.updateTime);
@@ -300,11 +304,14 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
       await patchDoc(env, path, { aiUsageClaimed: true, aiUsageMonth: month }, claimedPost.updateTime);
     }
     
+    trace.stage = "gemini_generate_and_parse";
     const parsed = (await geminiJson(env, captionPrompt(current.data, user.data, language, refresh), 1800, { type: "OBJECT", properties: { captions: { type: "ARRAY", minItems: 3, maxItems: 3, items: { type: "STRING" } } }, required: ["captions"] })) as { captions?: unknown };
     const captions = Array.isArray(parsed.captions) ? parsed.captions.map(String).map(s => s.trim()).filter(Boolean).slice(0, 3) : [];
     if (captions.length !== 3) throw new Error("Gemini did not return exactly three caption options.");
+    trace.stage = "read_post_before_save";
     const latestPost = await getDoc(env, path);
     const refreshCount = Number(latestPost.data.captionRefreshCount ?? 0) + (refresh ? 1 : 0);
+    trace.stage = "save_captions_and_approval_status";
     await patchDoc(env, path, {
       aiCaptions: captions, aiCaption: captions[0], status: "pending_approval",
       aiGeneratedAt: { __timestamp: new Date().toISOString() },
@@ -312,8 +319,11 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
     }, latestPost.updateTime);
     return { captions, refreshCount };
   } catch (error) {
+    trace.stage = "save_generation_failure";
     const latest = await getDoc(env, path).catch(() => null);
     if (latest) await patchDoc(env, path, { status: refresh ? "pending_approval" : "failed", failureCode: "AI_GENERATION_FAILED", failureMessage: String(error).slice(0, 400) }, latest.updateTime).catch(() => undefined);
+    console.error(JSON.stringify({ event: "post_generation_failed", requestId: trace.requestId, stage: trace.stage, error: error instanceof Error ? error.message : String(error), postId }));
+    if (error && typeof error === "object") (error as any).stage = trace.stage;
     throw error;
   }
 }
@@ -439,6 +449,8 @@ async function handle(request: Request, env: Env): Promise<Response> {
     }});
   }
   if (request.method !== "POST" || !url.pathname.startsWith("/api/")) return response({ error: "Not found." }, 404, origin);
+  let requestId = request.headers.get("x-request-id") ?? crypto.randomUUID();
+  let stage = "authenticate_request";
   try {
     const user = await verifyUser(request, env);
     if (url.pathname === "/api/media/upload") {
@@ -456,17 +468,22 @@ async function handle(request: Request, env: Env): Promise<Response> {
       await env.MEDIA_BUCKET.put(key, arrayBuffer(binary), { metadata: { contentType } });
       return response({ url: new URL("/media/" + key.split("/").map(encodeURIComponent).join("/"), request.url).toString(), size: binary.byteLength }, 201, origin);
     }
+    stage = "parse_request_body";
     const body = await request.json() as Json;
     if (url.pathname === "/api/posts/generate") {
       const postId = String(body.postId ?? "");
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(postId)) fail("A valid postId is required.");
-      const result = await generateForPost(env, user.uid, postId, false);
-      return response(result, 200, origin);
+      requestId = String(body.requestId ?? requestId).slice(0, 100);
+      const trace = { requestId, stage: "start_generation" };
+      const result = await generateForPost(env, user.uid, postId, false, trace);
+      return response({ ...result, requestId }, 200, origin);
     }
     if (url.pathname === "/api/posts/more-options") {
       const postId = String(body.postId ?? "");
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(postId)) fail("A valid postId is required.");
-      return response(await generateForPost(env, user.uid, postId, true), 200, origin);
+      const trace = { requestId, stage: "start_caption_refresh" };
+      const result = await generateForPost(env, user.uid, postId, true, trace);
+      return response({ ...result, requestId }, 200, origin);
     }
     if (url.pathname === "/api/posts/suggest-frame") {
       const postType = String(body.postType ?? "");
@@ -528,11 +545,15 @@ async function handle(request: Request, env: Env): Promise<Response> {
         return response({ status: "pending_approval", captions: post.data.aiCaptions ?? [] }, 200, origin);
       }
       if (post.data.status === "pending_ai") {
-        return response(await generateForPost(env, user.uid, postId, false), 200, origin);
+        const trace = { requestId, stage: "start_retry_generation" };
+        const result = await generateForPost(env, user.uid, postId, false, trace);
+        return response({ ...result, requestId }, 200, origin);
       }
       if (["AI_GENERATION_FAILED", "FREE_MONTHLY_LIMIT_REACHED", "BILLING_INACTIVE", "UNSUPPORTED_LANGUAGE", "CLIENT_GENERATION_REQUEST_FAILED"].includes(String(post.data.failureCode ?? ""))) {
         await patchDoc(env, `posts_queue/${postId}`, { status: "pending_ai", failureCode: null, failureMessage: null }, post.updateTime);
-        return response(await generateForPost(env, user.uid, postId, false), 200, origin);
+        const trace = { requestId, stage: "start_retry_generation" };
+        const result = await generateForPost(env, user.uid, postId, false, trace);
+        return response({ ...result, requestId }, 200, origin);
       }
       return response(await publish(env, user.uid, postId), 200, origin);
     }
@@ -587,7 +608,10 @@ async function handle(request: Request, env: Env): Promise<Response> {
     return response({ error: "Not found." }, 404, origin);
   } catch (error) {
     const status = Number((error as any)?.status ?? 500);
-    return response({ error: error instanceof Error ? error.message : "Unexpected server error." }, status >= 400 && status < 600 ? status : 500, origin);
+    const message = error instanceof Error ? error.message : "Unexpected server error.";
+    const failedStage = String((error as any)?.stage ?? stage);
+    console.error(JSON.stringify({ event: "api_request_failed", requestId, stage: failedStage, path: url.pathname, status, error: message }));
+    return response({ error: message, requestId, stage: failedStage }, status >= 400 && status < 600 ? status : 500, origin);
   }
 }
 export default { fetch: handle };
