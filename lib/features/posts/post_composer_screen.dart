@@ -167,8 +167,9 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
     });
     final postId = const Uuid().v4();
     var postCreated = false;
+    var promptNotes = '';
     try {
-      final promptNotes = _promptCompiler.compile(_notes.text);
+      promptNotes = _promptCompiler.compile(_notes.text);
       String beforeUrl = '';
       String afterUrl = '';
       if (_before != null) {
@@ -191,7 +192,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         try {
           _frameStyle = await BackendApiService().suggestPostFrame(
             postType: _type,
-            notes: _notes.text.trim(),
+            notes: promptNotes,
           );
         } catch (_) {
           // Keep the safe Classic template when AI frame suggestion is unavailable.
