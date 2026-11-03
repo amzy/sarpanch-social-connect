@@ -179,7 +179,6 @@ function jsonFromModel(text: string): any {
 async function geminiJson(
   env: Env, prompt: string, maxOutputTokens: number, responseSchema: Json,
 ): Promise<any> {
-  let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     const retryPrompt = attempt === 0 ? prompt : [
       prompt,
@@ -187,16 +186,14 @@ async function geminiJson(
       "Return one complete JSON object matching the supplied response schema.",
       "Do not use markdown fences, comments, or text outside the JSON object.",
       "Keep every string concise and close all quotes, arrays, and braces.",
-    ].join("\\n");
+    ].join("\n");
     try {
       const output = await gemini(env, retryPrompt, 0.25, maxOutputTokens, responseSchema);
       try {
         return jsonFromModel(output);
       } catch (error) {
-        lastError = error;
       }
     } catch (error) {
-      lastError = error;
       if (!(error instanceof Error) || !error.message.includes("output limit")) {
         throw error;
       }
