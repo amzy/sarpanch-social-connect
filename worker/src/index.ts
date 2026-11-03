@@ -194,7 +194,7 @@ function captionPrompt(post: Json, user: Json, language: string, refresh = false
     refresh ? "Make all options fresh and different from earlier captions." : "",
     "Type: " + String(post.type ?? "development"),
     profile ? "Profile: " + profile : "",
-    "Details: " + String(post.rawNotes ?? "").trim(),
+    "Details: " + String(post.promptNotes ?? post.rawNotes ?? "").trim(),
   ].filter(Boolean).join("\n");
 }
 async function generateForPost(env: Env, uid: string, postId: string, refresh: boolean): Promise<Json> {
