@@ -284,9 +284,11 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
   const aiUsage = (usage.aiGenerations ?? {}) as Json;
   const month = monthKey();
   const alreadyClaimed = current.data.aiUsageClaimed === true;
+  trace.stage = "check_monthly_limit";
   if (!refresh && !alreadyClaimed && plan !== "premium" && Number(aiUsage[month] ?? 0) >= 3) {
-    await patchDoc(env, path, { status: "failed", failureCode: "FREE_MONTHLY_LIMIT_REACHED" }, current.updateTime);
-    fail("FREE_MONTHLY_LIMIT_REACHED", 429);
+    await patchDoc(env, path, { status: "failed", failureCode: "FREE_MONTHLY_LIMIT_REACHED", failureMessage: "The app's free allowance of 3 successful AI generations for this month has been reached." }, current.updateTime);
+    const limitError = Object.assign(new Error("FREE_MONTHLY_LIMIT_REACHED"), { status: 429, stage: trace.stage });
+    throw limitError;
   }
   trace.stage = "set_processing_status";
   if (refresh) {
@@ -294,20 +296,26 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
   } else {
     await patchDoc(env, path, { status: "processing_ai" }, current.updateTime);
   }
+  let usageClaimedThisAttempt = false;
   try {
-    if (!refresh && !alreadyClaimed) {
-      trace.stage = "claim_monthly_usage";
-      await patchDoc(env, `users/${uid}`, {
-        usage: { ...usage, aiGenerations: { ...aiUsage, [month]: Number(aiUsage[month] ?? 0) + 1 }, lastAiGenerationAt: { __timestamp: new Date().toISOString() } },
-      }, user.updateTime);
-      const claimedPost = await getDoc(env, path);
-      await patchDoc(env, path, { aiUsageClaimed: true, aiUsageMonth: month }, claimedPost.updateTime);
-    }
-    
     trace.stage = "gemini_generate_and_parse";
     const parsed = (await geminiJson(env, captionPrompt(current.data, user.data, language, refresh), 1800, { type: "OBJECT", properties: { captions: { type: "ARRAY", minItems: 3, maxItems: 3, items: { type: "STRING" } } }, required: ["captions"] })) as { captions?: unknown };
     const captions = Array.isArray(parsed.captions) ? parsed.captions.map(String).map(s => s.trim()).filter(Boolean).slice(0, 3) : [];
     if (captions.length !== 3) throw new Error("Gemini did not return exactly three caption options.");
+    // Charge the app allowance only after Gemini has returned valid captions.
+    // Failed API calls, malformed output, and timeouts must not consume a slot.
+    if (!refresh && !alreadyClaimed) {
+      trace.stage = "claim_monthly_usage";
+      const latestUser = await getDoc(env, `users/${uid}`);
+      const latestUsage = (latestUser.data.usage ?? {}) as Json;
+      const latestAiUsage = (latestUsage.aiGenerations ?? {}) as Json;
+      await patchDoc(env, `users/${uid}`, {
+        usage: { ...latestUsage, aiGenerations: { ...latestAiUsage, [month]: Number(latestAiUsage[month] ?? 0) + 1 }, lastAiGenerationAt: { __timestamp: new Date().toISOString() } },
+      }, latestUser.updateTime);
+      usageClaimedThisAttempt = true;
+      const claimedPost = await getDoc(env, path);
+      await patchDoc(env, path, { aiUsageClaimed: true, aiUsageMonth: month }, claimedPost.updateTime);
+    }
     trace.stage = "read_post_before_save";
     const latestPost = await getDoc(env, path);
     const refreshCount = Number(latestPost.data.captionRefreshCount ?? 0) + (refresh ? 1 : 0);
@@ -319,11 +327,29 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
     }, latestPost.updateTime);
     return { captions, refreshCount };
   } catch (error) {
-    trace.stage = "save_generation_failure";
+    const failedStage = trace.stage;
+    if (usageClaimedThisAttempt) {
+      // Best-effort refund if a later Firestore save failed after captions were generated.
+      const latestUser = await getDoc(env, `users/${uid}`).catch(() => null);
+      if (latestUser) {
+        const latestUsage = (latestUser.data.usage ?? {}) as Json;
+        const latestAiUsage = (latestUsage.aiGenerations ?? {}) as Json;
+        const currentCount = Number(latestAiUsage[month] ?? 0);
+        await patchDoc(env, `users/${uid}`, {
+          usage: { ...latestUsage, aiGenerations: { ...latestAiUsage, [month]: Math.max(0, currentCount - 1) } },
+        }, latestUser.updateTime).catch(() => undefined);
+      }
+    }
     const latest = await getDoc(env, path).catch(() => null);
-    if (latest) await patchDoc(env, path, { status: refresh ? "pending_approval" : "failed", failureCode: "AI_GENERATION_FAILED", failureMessage: String(error).slice(0, 400) }, latest.updateTime).catch(() => undefined);
-    console.error(JSON.stringify({ event: "post_generation_failed", requestId: trace.requestId, stage: trace.stage, error: error instanceof Error ? error.message : String(error), postId }));
-    if (error && typeof error === "object") (error as any).stage = trace.stage;
+    if (latest) await patchDoc(env, path, {
+      status: refresh ? "pending_approval" : "failed",
+      failureCode: "AI_GENERATION_FAILED",
+      failureMessage: String(error).slice(0, 400),
+      ...(usageClaimedThisAttempt ? { aiUsageClaimed: false, aiUsageMonth: null } : {}),
+    }, latest.updateTime).catch(() => undefined);
+    trace.stage = "save_generation_failure";
+    console.error(JSON.stringify({ event: "post_generation_failed", requestId: trace.requestId, stage: failedStage, error: error instanceof Error ? error.message : String(error), postId }));
+    if (error && typeof error === "object" && !(error as any).stage) (error as any).stage = failedStage;
     throw error;
   }
 }
