@@ -11,3 +11,6 @@ ALLOWED_ORIGINS = "https://amzy.github.io"
 [[kv_namespaces]]
 binding = "MEDIA_BUCKET"
 id = "__KV_NAMESPACE_ID__"
+
+[[ai]]
+binding = "AI"
