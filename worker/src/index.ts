@@ -173,6 +173,37 @@ function jsonFromModel(text: string): any {
   const cleaned = text.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
   return JSON.parse(cleaned);
 }
+
+// Gemini's structured output can occasionally arrive truncated or invalid.
+// Retry once with a stricter JSON-only instruction before failing the post.
+async function geminiJson(
+  env: Env, prompt: string, maxOutputTokens: number, responseSchema: Json,
+): Promise<any> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const retryPrompt = attempt === 0 ? prompt : [
+      prompt,
+      "IMPORTANT: Your previous response was incomplete or invalid JSON.",
+      "Return one complete JSON object matching the supplied response schema.",
+      "Do not use markdown fences, comments, or text outside the JSON object.",
+      "Keep every string concise and close all quotes, arrays, and braces.",
+    ].join("\\n");
+    try {
+      const output = await gemini(env, retryPrompt, 0.25, maxOutputTokens, responseSchema);
+      try {
+        return jsonFromModel(output);
+      } catch (error) {
+        lastError = error;
+      }
+    } catch (error) {
+      lastError = error;
+      if (!(error instanceof Error) || !error.message.includes("output limit")) {
+        throw error;
+      }
+    }
+  }
+  throw new Error("Gemini returned incomplete structured data twice. No caption was saved. Please retry in a moment.");
+}
 function monthKey(): string {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit" }).formatToParts(new Date());
   return `${parts.find(p => p.type === "year")?.value}-${parts.find(p => p.type === "month")?.value}`;
@@ -241,8 +272,8 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
       const claimedPost = await getDoc(env, path);
       await patchDoc(env, path, { aiUsageClaimed: true, aiUsageMonth: month }, claimedPost.updateTime);
     }
-    const text = await gemini(env, captionPrompt(current.data, user.data, language, refresh), 0.45, 1100, { type: "OBJECT", properties: { captions: { type: "ARRAY", minItems: 3, maxItems: 3, items: { type: "STRING" } } }, required: ["captions"] });
-    const parsed = jsonFromModel(text) as { captions?: unknown };
+    
+    const parsed = (await geminiJson(env, captionPrompt(current.data, user.data, language, refresh), 1800, { type: "OBJECT", properties: { captions: { type: "ARRAY", minItems: 3, maxItems: 3, items: { type: "STRING" } } }, required: ["captions"] })) as { captions?: unknown };
     const captions = Array.isArray(parsed.captions) ? parsed.captions.map(String).map(s => s.trim()).filter(Boolean).slice(0, 3) : [];
     if (captions.length !== 3) throw new Error("Gemini did not return exactly three caption options.");
     const latestPost = await getDoc(env, path);
@@ -423,7 +454,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
         "Post type: " + postType,
         "Post details: " + notes,
       ].join("\n");
-      const suggestion = jsonFromModel(await gemini(env, prompt, 0.2, 80, { type: "OBJECT", properties: { frameStyle: { type: "STRING", enum: ["classic", "celebration", "development", "announcement", "minimal", "tricolor"] } }, required: ["frameStyle"] })) as { frameStyle?: unknown };
+      const suggestion = await geminiJson(env, prompt, 160, { type: "OBJECT", properties: { frameStyle: { type: "STRING", enum: ["classic", "celebration", "development", "announcement", "minimal", "tricolor"] } }, required: ["frameStyle"] }) as { frameStyle?: unknown };
       const frameStyle = String(suggestion.frameStyle ?? "");
       if (!["classic", "celebration", "development", "announcement", "minimal", "tricolor"].includes(frameStyle)) {
         fail("AI returned an unsupported frame style.", 502);
