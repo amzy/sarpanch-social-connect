@@ -223,10 +223,19 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
       try {
         await BackendApiService().generatePost(postId);
       } catch (generationError) {
-        await PostRepository().markGenerationFailed(
-          postId,
-          generationError.toString(),
-        );
+        // The Worker owns the generation lifecycle and normally marks the post
+        // failed itself. A client-side update can be denied after the Worker has
+        // already moved the status to processing_ai/failed; never let that
+        // secondary Firestore error hide the original backend/Gemini error.
+        try {
+          await PostRepository().markGenerationFailed(
+            postId,
+            generationError.toString(),
+          );
+        } catch (_) {
+          // Preserve the generation error. The Worker may already have saved
+          // the authoritative failureCode/failureMessage on the post.
+        }
         rethrow;
       }
       if (mounted) Navigator.of(context).pop();
