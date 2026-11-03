@@ -323,6 +323,7 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
     const latest = await getDoc(env, path).catch(() => null);
     if (latest) await patchDoc(env, path, { status: refresh ? "pending_approval" : "failed", failureCode: "AI_GENERATION_FAILED", failureMessage: String(error).slice(0, 400) }, latest.updateTime).catch(() => undefined);
     console.error(JSON.stringify({ event: "post_generation_failed", requestId: trace.requestId, stage: trace.stage, error: error instanceof Error ? error.message : String(error), postId }));
+    if (error && typeof error === "object") (error as any).stage = trace.stage;
     throw error;
   }
 }
@@ -602,8 +603,9 @@ async function handle(request: Request, env: Env): Promise<Response> {
   } catch (error) {
     const status = Number((error as any)?.status ?? 500);
     const message = error instanceof Error ? error.message : "Unexpected server error.";
-    console.error(JSON.stringify({ event: "api_request_failed", requestId, stage, path: url.pathname, status, error: message }));
-    return response({ error: message, requestId, stage }, status >= 400 && status < 600 ? status : 500, origin);
+    const failedStage = String((error as any)?.stage ?? stage);
+    console.error(JSON.stringify({ event: "api_request_failed", requestId, stage: failedStage, path: url.pathname, status, error: message }));
+    return response({ error: message, requestId, stage: failedStage }, status >= 400 && status < 600 ? status : 500, origin);
   }
 }
 export default { fetch: handle };
