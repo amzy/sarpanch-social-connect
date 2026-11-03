@@ -534,7 +534,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
           "Return the person's name and place names in the natural native writing system used for " + contentLanguage + ". Transliterate proper names; do not translate their meanings or add honorifics. Use both English and Hindi spellings as clues. Keep names faithful and recognisable.",
           "Do not add any facts. If a field is blank, return an empty string for it. Return JSON only.",
           "Source profile: " + JSON.stringify(sourceProfile),
-        ].join("\\n"), 300, {
+        ].join("\n"), 300, {
           type: "OBJECT",
           properties: {
             sarpanchName: { type: "STRING" },
@@ -555,10 +555,6 @@ async function handle(request: Request, env: Env): Promise<Response> {
       const panchayat = String(localizedProfile.panchayatName || sourceProfile.panchayatName || sourceProfile.panchayatNameHindi || "Gram Panchayat");
       const district = String(localizedProfile.district || sourceProfile.district);
       const state = String(localizedProfile.state || sourceProfile.state);
-      const name = String(profile.data.sarpanchNameHindi || profile.data.sarpanchName || "Sarpanch");
-      const panchayat = String(profile.data.panchayatNameHindi || profile.data.panchayatName || "Gram Panchayat");
-      const district = String(profile.data.district || "");
-      const state = String(profile.data.state || "");
       const prompt = [
         "Create a premium, modern Indian Gram Panchayat social-media poster artwork in a stylish hand-sketched editorial illustration style.",
         "Portrait 4:5 composition, rich layered pencil and ink textures, refined watercolor washes, contemporary graphic design, strong visual hierarchy, warm natural light and polished print finish.",
