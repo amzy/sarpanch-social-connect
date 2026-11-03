@@ -7,7 +7,7 @@ service cloud.firestore {
     function validPostType(type) { return type in ['festival', 'development', 'announcement', 'project', 'event', 'public_service']; }
     function validClientPostCreate(postId) {
       return request.resource.data.keys().hasOnly([
-        'postId', 'uid', 'type', 'contentLanguage', 'creationTimestamp', 'rawNotes',
+        'postId', 'uid', 'type', 'contentLanguage', 'creationTimestamp', 'rawNotes', 'promptNotes',
         'beforeImageUrl', 'afterImageUrl', 'finalCompositedImage',
         'status', 'scheduledTime'
       ])
@@ -18,6 +18,7 @@ service cloud.firestore {
       && request.resource.data.status == 'pending_ai'
       && request.resource.data.creationTimestamp == request.time
       && request.resource.data.rawNotes is string
+      && request.resource.data.promptNotes is string
       && request.resource.data.beforeImageUrl is string
       && request.resource.data.afterImageUrl is string
       && request.resource.data.finalCompositedImage is string
