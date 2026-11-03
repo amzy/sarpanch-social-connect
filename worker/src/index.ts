@@ -161,7 +161,19 @@ async function gemini(
     method: "POST", headers: { "content-type": "application/json" },
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig }),
   });
-  const data = await result.json() as any;
+  // Read the HTTP body as text first: Response.json() throws a raw
+  // SyntaxError on truncated responses, before the structured-output retry
+  // layer can classify and retry the transient failure.
+  const responseText = await result.text();
+  let data: any;
+  try {
+    data = JSON.parse(responseText);
+  } catch {
+    if (result.ok) {
+      throw new Error("Gemini HTTP response was incomplete or invalid JSON.");
+    }
+    throw new Error(`Gemini returned an unreadable error response (HTTP ${result.status}).`);
+  }
   if (!result.ok) throw new Error(data.error?.message ?? "Gemini request failed.");
   const candidate = data.candidates?.[0];
   if (candidate?.finishReason === "MAX_TOKENS") throw new Error("Gemini response reached its output limit. Please retry.");
@@ -194,9 +206,10 @@ async function geminiJson(
       } catch (error) {
       }
     } catch (error) {
-      if (!(error instanceof Error) || !error.message.includes("output limit")) {
-        throw error;
-      }
+      const message = error instanceof Error ? error.message : String(error);
+      const retryable = message.includes("output limit") ||
+        message.includes("HTTP response was incomplete or invalid JSON");
+      if (!retryable) throw error;
     }
   }
   throw new Error("Gemini returned incomplete structured data twice. No caption was saved. Please retry in a moment.");
