@@ -53,7 +53,16 @@ function pemBytes(pem: string): ArrayBuffer {
 }
 async function googleAccessToken(env: Env): Promise<string> {
   if (cachedAccessToken && cachedAccessToken.expiresAt > Date.now() + 60_000) return cachedAccessToken.token;
-  const account = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON) as { client_email: string; private_key: string; token_uri?: string };
+  let account: { client_email: string; private_key: string; token_uri?: string };
+  try {
+    account = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  } catch {
+    throw new Error("Worker configuration error: GOOGLE_SERVICE_ACCOUNT_JSON is not valid JSON. Re-add the complete service-account JSON as the Cloudflare Worker secret; do not paste it into the app or chat.");
+  }
+  if (typeof account.client_email !== "string" || !account.client_email.includes("@") ||
+      typeof account.private_key !== "string" || !account.private_key.includes("PRIVATE KEY")) {
+    throw new Error("Worker configuration error: GOOGLE_SERVICE_ACCOUNT_JSON is missing client_email or private_key. Re-add the complete service-account JSON as the Cloudflare Worker secret.");
+  }
   const now = Math.floor(Date.now() / 1000);
   const header = b64url(encoder.encode(JSON.stringify({ alg: "RS256", typ: "JWT" })));
   const claim = b64url(encoder.encode(JSON.stringify({
