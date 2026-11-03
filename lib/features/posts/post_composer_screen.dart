@@ -110,8 +110,9 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
     final sealUrl = (widget.profile['sealUrl'] as String?) ?? '';
     if (_generatedArtworkUrl.isNotEmpty) {
       await precacheImage(NetworkImage(_generatedArtworkUrl), context);
-      if (!mounted)
+      if (!mounted) {
         throw Exception('The post editor was closed before preview capture.');
+      }
     }
     if (profileUrl.isNotEmpty) {
       await precacheImage(NetworkImage(profileUrl), context);
