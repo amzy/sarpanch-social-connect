@@ -84,6 +84,14 @@ class _FailedPostCardState extends State<_FailedPostCard> {
               child: Text('Failure: $failure',
                   style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ),
+            if ((data['failureMessage'] as String?)?.trim().isNotEmpty ?? false)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: SelectableText(
+                  data['failureMessage'] as String,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
             if (_error != null)
               Padding(
                   padding: const EdgeInsets.only(top: 8),
