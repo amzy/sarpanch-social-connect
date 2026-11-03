@@ -149,14 +149,23 @@ async function createDoc(env: Env, path: string, fields: Json): Promise<void> {
   }, body: JSON.stringify({ fields: encodeFields(fields) }) });
   if (!result.ok) throw new Error(`Firestore create failed (${result.status}): ${(await result.text()).slice(0, 300)}`);
 }
-async function gemini(env: Env, prompt: string, temperature = 0.55, maxOutputTokens = 700): Promise<string> {
+async function gemini(
+  env: Env, prompt: string, temperature = 0.55, maxOutputTokens = 700, responseSchema?: Json,
+): Promise<string> {
+  const generationConfig: Json = { temperature, maxOutputTokens };
+  if (responseSchema) {
+    generationConfig.responseMimeType = "application/json";
+    generationConfig.responseSchema = responseSchema;
+  }
   const result = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
     method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature, maxOutputTokens } }),
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig }),
   });
   const data = await result.json() as any;
   if (!result.ok) throw new Error(data.error?.message ?? "Gemini request failed.");
-  const text = data.candidates?.[0]?.content?.parts?.map((part: any) => part.text ?? "").join("").trim();
+  const candidate = data.candidates?.[0];
+  if (candidate?.finishReason === "MAX_TOKENS") throw new Error("Gemini response reached its output limit. Please retry.");
+  const text = candidate?.content?.parts?.map((part: any) => part.text ?? "").join("").trim();
   if (!text) throw new Error("Gemini returned an empty response.");
   return text;
 }
@@ -169,17 +178,24 @@ function monthKey(): string {
   return `${parts.find(p => p.type === "year")?.value}-${parts.find(p => p.type === "month")?.value}`;
 }
 function captionPrompt(post: Json, user: Json, language: string, refresh = false): string {
+  const profile = [
+    user.sarpanchName ? "Name: " + String(user.sarpanchName) : "",
+    user.sarpanchNameHindi ? "Hindi name: " + String(user.sarpanchNameHindi) : "",
+    user.panchayatName ? "Panchayat: " + String(user.panchayatName) : "",
+    user.panchayatNameHindi ? "Hindi panchayat: " + String(user.panchayatNameHindi) : "",
+    user.district ? "District: " + String(user.district) : "",
+    user.state ? "State: " + String(user.state) : "",
+  ].filter(Boolean).join("; ");
   return [
-    "Act as a professional public relations writer for an Indian village Gram Panchayat Sarpanch.",
-    "Write an impactful, humble, factual public update. Do not invent achievements, budgets, dates, names, statistics, approvals or promises.",
-    `Write entirely in ${language}. Preserve supplied proper nouns and numbers. Preserve exact user-provided Hindi spellings.`,
-    "Use a respectful, accessible tone. Avoid partisan attacks, inflammatory language, requests for votes, or unsupported political claims.",
-    `Post type: ${String(post.type ?? "development")}.`,
-    `Sarpanch (English): ${String(user.sarpanchName ?? "")}; Sarpanch (Hindi): ${String(user.sarpanchNameHindi ?? "")}; Panchayat (English): ${String(user.panchayatName ?? "")}; Panchayat (Hindi): ${String(user.panchayatNameHindi ?? "")}; District: ${String(user.district ?? "")}; State: ${String(user.state ?? "")}.`,
-    `User notes: ${String(post.rawNotes ?? "").trim()}.`,
-    refresh ? "Generate three NEW options, different in wording and approach from previous options." : "Create exactly THREE distinct options: concise, warm/community-focused, and formal/informative.",
-    "Return valid JSON only: {\"captions\":[\"option 1\",\"option 2\",\"option 3\"]}.",
-  ].join("\n");
+    "Write 3 short, ready-to-post public updates in " + language + " for an Indian Gram Panchayat.",
+    "Tone: humble, clear, respectful, non-partisan. No vote requests or attacks.",
+    "Use only supplied facts. Never invent achievements, figures, dates, names, approvals or promises. Preserve names, numbers and Hindi spellings exactly.",
+    "Return exactly 3 distinct captions: concise; warm/community-focused; formal/informative. No labels or explanations.",
+    refresh ? "Make all options fresh and different from earlier captions." : "",
+    "Type: " + String(post.type ?? "development"),
+    profile ? "Profile: " + profile : "",
+    "Details: " + String(post.rawNotes ?? "").trim(),
+  ].filter(Boolean).join("\n");
 }
 async function generateForPost(env: Env, uid: string, postId: string, refresh: boolean): Promise<Json> {
   const path = `posts_queue/${postId}`;
@@ -225,7 +241,7 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
       const claimedPost = await getDoc(env, path);
       await patchDoc(env, path, { aiUsageClaimed: true, aiUsageMonth: month }, claimedPost.updateTime);
     }
-    const text = await gemini(env, captionPrompt(current.data, user.data, language, refresh));
+    const text = await gemini(env, captionPrompt(current.data, user.data, language, refresh), 0.45, 1100, { type: "OBJECT", properties: { captions: { type: "ARRAY", minItems: 3, maxItems: 3, items: { type: "STRING" } } }, required: ["captions"] });
     const parsed = jsonFromModel(text) as { captions?: unknown };
     const captions = Array.isArray(parsed.captions) ? parsed.captions.map(String).map(s => s.trim()).filter(Boolean).slice(0, 3) : [];
     if (captions.length !== 3) throw new Error("Gemini did not return exactly three caption options.");
@@ -407,7 +423,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
         "Post type: " + postType,
         "Post details: " + notes,
       ].join("\n");
-      const suggestion = jsonFromModel(await gemini(env, prompt, 0.2, 100)) as { frameStyle?: unknown };
+      const suggestion = jsonFromModel(await gemini(env, prompt, 0.2, 80, { type: "OBJECT", properties: { frameStyle: { type: "STRING", enum: ["classic", "celebration", "development", "announcement", "minimal", "tricolor"] } }, required: ["frameStyle"] })) as { frameStyle?: unknown };
       const frameStyle = String(suggestion.frameStyle ?? "");
       if (!["classic", "celebration", "development", "announcement", "minimal", "tricolor"].includes(frameStyle)) {
         fail("AI returned an unsupported frame style.", 502);
