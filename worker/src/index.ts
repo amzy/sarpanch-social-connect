@@ -551,7 +551,9 @@ async function handle(request: Request, env: Env): Promise<Response> {
       }
       if (["AI_GENERATION_FAILED", "FREE_MONTHLY_LIMIT_REACHED", "BILLING_INACTIVE", "UNSUPPORTED_LANGUAGE", "CLIENT_GENERATION_REQUEST_FAILED"].includes(String(post.data.failureCode ?? ""))) {
         await patchDoc(env, `posts_queue/${postId}`, { status: "pending_ai", failureCode: null, failureMessage: null }, post.updateTime);
-        return response(await generateForPost(env, user.uid, postId, false), 200, origin);
+        const trace = { requestId, stage: "start_retry_generation" };
+        const result = await generateForPost(env, user.uid, postId, false, trace);
+        return response({ ...result, requestId }, 200, origin);
       }
       return response(await publish(env, user.uid, postId), 200, origin);
     }
