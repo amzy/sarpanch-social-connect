@@ -23,14 +23,20 @@ class ProfileRepository {
       throw StateError('You must be signed in to save this profile.');
     }
 
+    final ref = _firestore.collection('users').doc(uid);
+    final existing = await ref.get();
+    if (existing.exists) {
+      // Update only profile-owned fields. Do not rewrite registration metadata,
+      // billing state, creation timestamps, or server-managed usage counters.
+      await ref.update(profile);
+      return;
+    }
+
     final email = user.email ?? '';
     final username = (user.displayName?.trim().isNotEmpty ?? false)
         ? user.displayName!.trim().toLowerCase()
         : (email.contains('@') ? email.split('@').first : uid);
-
-    // set(merge: true) handles both first-time profile creation and completion
-    // of an existing registration document. It never writes another user's UID.
-    await _firestore.collection('users').doc(uid).set({
+    await ref.set({
       'uid': uid,
       'email': email,
       'username': username,
@@ -40,6 +46,6 @@ class ProfileRepository {
       'billingStatus': 'active',
       'createdAt': FieldValue.serverTimestamp(),
       ...profile,
-    }, SetOptions(merge: true));
+    });
   }
 }
