@@ -30,6 +30,14 @@ function response(data: unknown, status = 200, origin = "*"): Response {
   }});
 }
 function fail(message: string, status = 400): never { throw Object.assign(new Error(message), { status }); }
+async function parseJsonResponse<T = any>(result: Response, source: string): Promise<T> {
+  const raw = await result.text();
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    throw new Error(source + " returned incomplete or invalid JSON (HTTP " + result.status + "; " + raw.length + " bytes).");
+  }
+}
 function b64url(bytes: Uint8Array): string {
   let binary = ""; for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
@@ -61,7 +69,7 @@ async function googleAccessToken(env: Env): Promise<string> {
     method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion }),
   });
-  const tokenData = await tokenResponse.json() as { access_token?: string; expires_in?: number; error_description?: string };
+  const tokenData = await parseJsonResponse<{ access_token?: string; expires_in?: number; error_description?: string }>(tokenResponse, "Google OAuth token endpoint");
   if (!tokenResponse.ok || !tokenData.access_token) throw new Error(tokenData.error_description ?? "Google service authentication failed.");
   cachedAccessToken = { token: tokenData.access_token, expiresAt: Date.now() + (tokenData.expires_in ?? 3600) * 1000 };
   return tokenData.access_token;
@@ -125,7 +133,7 @@ async function getDoc(env: Env, path: string): Promise<{ data: Json; updateTime:
   const result = await fetch(docUrl(env, path), { headers: { authorization: `Bearer ${token}` } });
   if (result.status === 404) fail("Record not found.", 404);
   if (!result.ok) throw new Error(`Firestore read failed (${result.status}): ${(await result.text()).slice(0, 300)}`);
-  const doc = await result.json() as FirestoreDocument;
+  const doc = await parseJsonResponse<FirestoreDocument>(result, "Firestore document read");
   return { data: decodeFields(doc.fields ?? {}), updateTime: doc.updateTime!, name: doc.name };
 }
 async function patchDoc(env: Env, path: string, fields: Json, updateTime?: string): Promise<void> {
