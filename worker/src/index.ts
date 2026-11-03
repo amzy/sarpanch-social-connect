@@ -179,15 +179,21 @@ async function workersAi(env: Env, prompt: string, temperature = 0.55, maxOutput
         { role: "user", content: prompt },
       ],
       temperature,
-      max_tokens: maxOutputTokens,
+      // GLM-4.7-Flash enables reasoning by default. Disable it for these
+      // short, user-facing tasks so reasoning tokens do not crowd out content.
+      chat_template_kwargs: { enable_thinking: false },
+      max_completion_tokens: maxOutputTokens,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error("Cloudflare Workers AI request failed (" + model + "): " + message.slice(0, 300));
   }
+  const choiceContent = result?.choices?.[0]?.message?.content;
   const output = typeof result === "string" ? result :
     typeof result?.response === "string" ? result.response :
-    typeof result?.output_text === "string" ? result.output_text : "";
+    typeof result?.output_text === "string" ? result.output_text :
+    typeof choiceContent === "string" ? choiceContent :
+    Array.isArray(choiceContent) ? choiceContent.map((part: any) => typeof part?.text === "string" ? part.text : "").join("") : "";
   if (!output.trim()) throw new Error("Cloudflare Workers AI returned an empty response (" + model + ").");
   return output.trim();
 }
@@ -218,6 +224,7 @@ async function workersAiJson(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const retryable = message.includes("output limit") ||
+        message.includes("returned an empty response") ||
         message.includes("HTTP response was incomplete or invalid JSON");
       if (!retryable) throw error;
     }
