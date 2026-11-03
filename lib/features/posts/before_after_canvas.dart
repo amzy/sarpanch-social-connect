@@ -42,6 +42,7 @@ class BeforeAfterCanvas extends StatelessWidget {
   final String localizedState;
   final String contentLanguage;
 
+  // Keep image labels legible over uploaded and generated artwork.
   Widget _photo(Uint8List? bytes, String label) {
     return Expanded(
       child: ClipRRect(
