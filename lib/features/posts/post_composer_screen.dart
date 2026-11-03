@@ -161,7 +161,6 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
           () => _error = 'Describe the update before generating captions.');
       return;
     }
-    final promptNotes = _promptCompiler.compile(_notes.text);
     setState(() {
       _saving = true;
       _error = null;
@@ -169,6 +168,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
     final postId = const Uuid().v4();
     var postCreated = false;
     try {
+      final promptNotes = _promptCompiler.compile(_notes.text);
       String beforeUrl = '';
       String afterUrl = '';
       if (_before != null) {
