@@ -40,6 +40,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   String _frameStyle = 'classic';
   bool _saving = false;
   String? _error;
+  String _generatedArtworkUrl = '';
+  Map<String, dynamic> _localizedProfile = const {};
 
   @override
   void initState() {
@@ -106,6 +108,12 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
     }
     final profileUrl = (widget.profile['imageUrl'] as String?) ?? '';
     final sealUrl = (widget.profile['sealUrl'] as String?) ?? '';
+    if (_generatedArtworkUrl.isNotEmpty) {
+      await precacheImage(NetworkImage(_generatedArtworkUrl), context);
+      if (!mounted) {
+        throw Exception('The post editor was closed before preview capture.');
+      }
+    }
     if (profileUrl.isNotEmpty) {
       await precacheImage(NetworkImage(profileUrl), context);
       if (!mounted) {
@@ -170,6 +178,19 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
     var promptNotes = '';
     try {
       promptNotes = _promptCompiler.compile(_notes.text);
+      // Generate the artwork from the content prompt. The Worker loads the saved
+      // Panchayat profile; the original profile photo is composited unchanged.
+      final artwork = await BackendApiService().generatePostArtwork(
+        postType: _type,
+        notes: promptNotes,
+        contentLanguage: _contentLanguage,
+      );
+      _generatedArtworkUrl = artwork['imageUrl'] as String;
+      _localizedProfile = Map<String, dynamic>.from(
+        artwork['localizedProfile'] as Map? ?? const {},
+      );
+      if (mounted) setState(() {});
+      await WidgetsBinding.instance.endOfFrame;
       String beforeUrl = '';
       String afterUrl = '';
       if (_before != null) {
@@ -445,6 +466,15 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
                   notes: _notes.text,
                   stacked: _stacked,
                   frameStyle: _frameStyle,
+                  generatedArtworkUrl: _generatedArtworkUrl,
+                  localizedSarpanchName:
+                      (_localizedProfile['sarpanchName'] as String?) ?? '',
+                  localizedPanchayatName:
+                      (_localizedProfile['panchayatName'] as String?) ?? '',
+                  localizedDistrict:
+                      (_localizedProfile['district'] as String?) ?? '',
+                  localizedState: (_localizedProfile['state'] as String?) ?? '',
+                  contentLanguage: _contentLanguage,
                 ),
               ),
             ),

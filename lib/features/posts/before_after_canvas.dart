@@ -16,6 +16,12 @@ class BeforeAfterCanvas extends StatelessWidget {
     required this.notes,
     this.stacked = false,
     this.frameStyle = 'classic',
+    this.generatedArtworkUrl = '',
+    this.localizedSarpanchName = '',
+    this.localizedPanchayatName = '',
+    this.localizedDistrict = '',
+    this.localizedState = '',
+    this.contentLanguage = 'Hindi',
   });
 
   final Uint8List? beforeBytes;
@@ -29,7 +35,14 @@ class BeforeAfterCanvas extends StatelessWidget {
   final String notes;
   final bool stacked;
   final String frameStyle;
+  final String generatedArtworkUrl;
+  final String localizedSarpanchName;
+  final String localizedPanchayatName;
+  final String localizedDistrict;
+  final String localizedState;
+  final String contentLanguage;
 
+  // Keep image labels legible over uploaded and generated artwork.
   Widget _photo(Uint8List? bytes, String label) {
     return Expanded(
       child: ClipRRect(
@@ -87,6 +100,17 @@ class BeforeAfterCanvas extends StatelessWidget {
       'tricolor' => const Color(0xFF174A8B),
       _ => const Color(0xFF245C4A),
     };
+    const roleLabels = {
+      'English': 'Sarpanch',
+      'Hindi': 'सरपंच',
+      'Marathi': 'सरपंच',
+      'Telugu': 'సర్పంచ్',
+      'Tamil': 'ஊராட்சி தலைவர்',
+      'Gujarati': 'સરપંચ',
+    };
+    final location = [localizedDistrict, localizedState]
+        .where((value) => value.trim().isNotEmpty)
+        .join(', ');
     final images = stacked
         ? Column(
             children: [
@@ -125,9 +149,11 @@ class BeforeAfterCanvas extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    panchayatNameHindi.isNotEmpty
-                        ? panchayatNameHindi
-                        : panchayatName,
+                    localizedPanchayatName.isNotEmpty
+                        ? localizedPanchayatName
+                        : (panchayatNameHindi.isNotEmpty
+                            ? panchayatNameHindi
+                            : panchayatName),
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
@@ -141,18 +167,66 @@ class BeforeAfterCanvas extends StatelessWidget {
             if (beforeBytes != null || afterBytes != null)
               SizedBox(height: stacked ? 820 : 430, child: images)
             else
-              Container(
-                height: 350,
-                alignment: Alignment.center,
-                padding: const EdgeInsets.all(24),
-                color: const Color(0xFFF0F5F1),
-                child: Text(
-                  notes,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 30,
-                    color: Color(0xFF173E32),
-                    fontWeight: FontWeight.w600,
+              SizedBox(
+                height: 430,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(18),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (generatedArtworkUrl.isNotEmpty)
+                        Image.network(generatedArtworkUrl, fit: BoxFit.cover)
+                      else
+                        const ColoredBox(color: Color(0xFFF0F5F1)),
+                      DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.08),
+                              Colors.black.withValues(alpha: 0.68),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        left: 22,
+                        right: 22,
+                        bottom: 22,
+                        child: Text(
+                          notes,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.left,
+                          style: const TextStyle(
+                            fontSize: 30,
+                            height: 1.15,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            shadows: [
+                              Shadow(color: Colors.black54, blurRadius: 8)
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (profileImageUrl.isNotEmpty)
+                        Positioned(
+                          top: 18,
+                          left: 18,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: CircleAvatar(
+                              radius: 54,
+                              backgroundImage: NetworkImage(profileImageUrl),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
@@ -193,22 +267,32 @@ class BeforeAfterCanvas extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        sarpanchNameHindi.isNotEmpty
-                            ? sarpanchNameHindi
-                            : sarpanchName,
+                        localizedSarpanchName.isNotEmpty
+                            ? localizedSarpanchName
+                            : (sarpanchNameHindi.isNotEmpty
+                                ? sarpanchNameHindi
+                                : sarpanchName),
                         style: const TextStyle(
                           fontSize: 21,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF173E32),
                         ),
                       ),
-                      const Text(
-                        'Sarpanch',
-                        style: TextStyle(
+                      Text(
+                        roleLabels[contentLanguage] ?? 'Sarpanch',
+                        style: const TextStyle(
                           fontSize: 16,
                           color: Color(0xFF52675D),
                         ),
                       ),
+                      if (location.isNotEmpty)
+                        Text(
+                          location,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF52675D),
+                          ),
+                        ),
                     ],
                   ),
                 ),

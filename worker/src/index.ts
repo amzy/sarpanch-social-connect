@@ -504,6 +504,85 @@ async function handle(request: Request, env: Env): Promise<Response> {
       const result = await generateForPost(env, user.uid, postId, true, trace);
       return response({ ...result, requestId }, 200, origin);
     }
+    if (url.pathname === "/api/posts/generate-image") {
+      const postType = String(body.postType ?? "");
+      const notes = String(body.notes ?? "").trim();
+      const contentLanguage = String(body.contentLanguage ?? "Hindi");
+      if (!POST_TYPES.has(postType)) fail("Choose a valid post type.");
+      if (!LANGUAGES.has(contentLanguage)) fail("Choose a supported content language.");
+      if (!notes || notes.length > 5000) fail("Post details must be between 1 and 5000 characters.");
+      const profile = await getDoc(env, `users/${user.uid}`);
+      const sourceProfile = {
+        sarpanchName: String(profile.data.sarpanchName ?? ""),
+        sarpanchNameHindi: String(profile.data.sarpanchNameHindi ?? ""),
+        panchayatName: String(profile.data.panchayatName ?? ""),
+        panchayatNameHindi: String(profile.data.panchayatNameHindi ?? ""),
+        district: String(profile.data.district ?? ""),
+        state: String(profile.data.state ?? ""),
+      };
+      let localizedProfile: Json;
+      if (contentLanguage === "English") {
+        localizedProfile = {
+          sarpanchName: sourceProfile.sarpanchName || sourceProfile.sarpanchNameHindi,
+          panchayatName: sourceProfile.panchayatName || sourceProfile.panchayatNameHindi,
+          district: sourceProfile.district,
+          state: sourceProfile.state,
+        };
+      } else {
+        const translated = await workersAiJson(env, [
+          "Localise the following Indian public representative and Gram Panchayat profile details into " + contentLanguage + ".",
+          "Return the person's name and place names in the natural native writing system used for " + contentLanguage + ". Transliterate proper names; do not translate their meanings or add honorifics. Use both English and Hindi spellings as clues. Keep names faithful and recognisable.",
+          "Do not add any facts. If a field is blank, return an empty string for it. Return JSON only.",
+          "Source profile: " + JSON.stringify(sourceProfile),
+        ].join("\n"), 300, {
+          type: "OBJECT",
+          properties: {
+            sarpanchName: { type: "STRING" },
+            panchayatName: { type: "STRING" },
+            district: { type: "STRING" },
+            state: { type: "STRING" },
+          },
+          required: ["sarpanchName", "panchayatName", "district", "state"],
+        });
+        localizedProfile = {
+          sarpanchName: String(translated.sarpanchName ?? ""),
+          panchayatName: String(translated.panchayatName ?? ""),
+          district: String(translated.district ?? ""),
+          state: String(translated.state ?? ""),
+        };
+      }
+      const name = String(localizedProfile.sarpanchName || sourceProfile.sarpanchName || sourceProfile.sarpanchNameHindi || "Sarpanch");
+      const panchayat = String(localizedProfile.panchayatName || sourceProfile.panchayatName || sourceProfile.panchayatNameHindi || "Gram Panchayat");
+      const district = String(localizedProfile.district || sourceProfile.district);
+      const state = String(localizedProfile.state || sourceProfile.state);
+      const prompt = [
+        "Create a premium, modern Indian Gram Panchayat social-media poster artwork in a stylish hand-sketched editorial illustration style.",
+        "Portrait 4:5 composition, rich layered pencil and ink textures, refined watercolor washes, contemporary graphic design, strong visual hierarchy, warm natural light and polished print finish.",
+        "The central scene must visually communicate the supplied community update. Use a dignified, welcoming rural Indian setting and culturally appropriate details.",
+        "Leave clean negative space for typography to be added by the app. Do not render any letters, words, numbers, logos, watermarks, seals, flags, political party symbols or fake official marks.",
+        "Do not invent facts, completed works, public benefits or achievements. Depict the topic as an illustrative concept, not as documentary proof.",
+        "Sarpanch profile context: " + name + ". Gram Panchayat: " + panchayat + ". Location: " + [district, state].filter(Boolean).join(", ") + ".",
+        "Post category: " + postType + ".",
+        "Content prompt: " + notes,
+      ].join("\n");
+      let generated: any;
+      try {
+        generated = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", { prompt });
+      } catch (error) {
+        throw new Error("Cloudflare image generation failed: " + (error instanceof Error ? error.message : String(error)).slice(0, 260));
+      }
+      if (typeof generated?.image !== "string" || !generated.image) {
+        throw new Error("Cloudflare image model returned no image data.");
+      }
+      const imageBytes = fromB64(generated.image);
+      if (imageBytes.byteLength === 0 || imageBytes.byteLength > 8 * 1024 * 1024) {
+        fail("Generated artwork is empty or exceeds the 8 MB media limit.", 502);
+      }
+      const key = `${user.uid}/artwork/${crypto.randomUUID()}.jpg`;
+      await env.MEDIA_BUCKET.put(key, arrayBuffer(imageBytes), { metadata: { contentType: "image/jpeg" } });
+      const imageUrl = new URL("/media/" + key.split("/").map(encodeURIComponent).join("/"), request.url).toString();
+      return response({ imageUrl, localizedProfile, contentLanguage, model: "@cf/black-forest-labs/flux-1-schnell" }, 200, origin);
+    }
     if (url.pathname === "/api/posts/suggest-frame") {
       const postType = String(body.postType ?? "");
       const notes = String(body.notes ?? "").trim();
