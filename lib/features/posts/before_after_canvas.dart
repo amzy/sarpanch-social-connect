@@ -204,7 +204,9 @@ class BeforeAfterCanvas extends StatelessWidget {
                             height: 1.15,
                             color: Colors.white,
                             fontWeight: FontWeight.w800,
-                            shadows: [Shadow(color: Colors.black54, blurRadius: 8)],
+                            shadows: [
+                              Shadow(color: Colors.black54, blurRadius: 8)
+                            ],
                           ),
                         ),
                       ),
