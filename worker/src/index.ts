@@ -481,7 +481,9 @@ async function handle(request: Request, env: Env): Promise<Response> {
     if (url.pathname === "/api/posts/more-options") {
       const postId = String(body.postId ?? "");
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(postId)) fail("A valid postId is required.");
-      return response(await generateForPost(env, user.uid, postId, true), 200, origin);
+      const trace = { requestId, stage: "start_caption_refresh" };
+      const result = await generateForPost(env, user.uid, postId, true, trace);
+      return response({ ...result, requestId }, 200, origin);
     }
     if (url.pathname === "/api/posts/suggest-frame") {
       const postType = String(body.postType ?? "");
@@ -543,7 +545,9 @@ async function handle(request: Request, env: Env): Promise<Response> {
         return response({ status: "pending_approval", captions: post.data.aiCaptions ?? [] }, 200, origin);
       }
       if (post.data.status === "pending_ai") {
-        return response(await generateForPost(env, user.uid, postId, false), 200, origin);
+        const trace = { requestId, stage: "start_retry_generation" };
+        const result = await generateForPost(env, user.uid, postId, false, trace);
+        return response({ ...result, requestId }, 200, origin);
       }
       if (["AI_GENERATION_FAILED", "FREE_MONTHLY_LIMIT_REACHED", "BILLING_INACTIVE", "UNSUPPORTED_LANGUAGE", "CLIENT_GENERATION_REQUEST_FAILED"].includes(String(post.data.failureCode ?? ""))) {
         await patchDoc(env, `posts_queue/${postId}`, { status: "pending_ai", failureCode: null, failureMessage: null }, post.updateTime);
