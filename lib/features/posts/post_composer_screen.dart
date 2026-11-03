@@ -41,6 +41,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   bool _saving = false;
   String? _error;
   String _generatedArtworkUrl = '';
+  Map<String, dynamic> _localizedProfile = const {};
 
   @override
   void initState() {
@@ -177,9 +178,14 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
       promptNotes = _promptCompiler.compile(_notes.text);
       // Generate the artwork from the content prompt. The Worker loads the saved
       // Panchayat profile; the original profile photo is composited unchanged.
-      _generatedArtworkUrl = await BackendApiService().generatePostArtwork(
+      final artwork = await BackendApiService().generatePostArtwork(
         postType: _type,
         notes: promptNotes,
+        contentLanguage: _contentLanguage,
+      );
+      _generatedArtworkUrl = artwork['imageUrl'] as String;
+      _localizedProfile = Map<String, dynamic>.from(
+        artwork['localizedProfile'] as Map? ?? const {},
       );
       if (mounted) setState(() {});
       await WidgetsBinding.instance.endOfFrame;
@@ -459,6 +465,15 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
                   stacked: _stacked,
                   frameStyle: _frameStyle,
                   generatedArtworkUrl: _generatedArtworkUrl,
+                  localizedSarpanchName:
+                      (_localizedProfile['sarpanchName'] as String?) ?? '',
+                  localizedPanchayatName:
+                      (_localizedProfile['panchayatName'] as String?) ?? '',
+                  localizedDistrict:
+                      (_localizedProfile['district'] as String?) ?? '',
+                  localizedState:
+                      (_localizedProfile['state'] as String?) ?? '',
+                  contentLanguage: _contentLanguage,
                 ),
               ),
             ),

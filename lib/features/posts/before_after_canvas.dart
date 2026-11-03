@@ -17,6 +17,11 @@ class BeforeAfterCanvas extends StatelessWidget {
     this.stacked = false,
     this.frameStyle = 'classic',
     this.generatedArtworkUrl = '',
+    this.localizedSarpanchName = '',
+    this.localizedPanchayatName = '',
+    this.localizedDistrict = '',
+    this.localizedState = '',
+    this.contentLanguage = 'Hindi',
   });
 
   final Uint8List? beforeBytes;
@@ -31,6 +36,11 @@ class BeforeAfterCanvas extends StatelessWidget {
   final bool stacked;
   final String frameStyle;
   final String generatedArtworkUrl;
+  final String localizedSarpanchName;
+  final String localizedPanchayatName;
+  final String localizedDistrict;
+  final String localizedState;
+  final String contentLanguage;
 
   Widget _photo(Uint8List? bytes, String label) {
     return Expanded(
@@ -89,6 +99,17 @@ class BeforeAfterCanvas extends StatelessWidget {
       'tricolor' => const Color(0xFF174A8B),
       _ => const Color(0xFF245C4A),
     };
+    const roleLabels = {
+      'English': 'Sarpanch',
+      'Hindi': 'सरपंच',
+      'Marathi': 'सरपंच',
+      'Telugu': 'సర్పంచ్',
+      'Tamil': 'ஊராட்சி தலைவர்',
+      'Gujarati': 'સરપંચ',
+    };
+    final location = [localizedDistrict, localizedState]
+        .where((value) => value.trim().isNotEmpty)
+        .join(', ');
     final images = stacked
         ? Column(
             children: [
@@ -127,9 +148,11 @@ class BeforeAfterCanvas extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    panchayatNameHindi.isNotEmpty
-                        ? panchayatNameHindi
-                        : panchayatName,
+                    localizedPanchayatName.isNotEmpty
+                        ? localizedPanchayatName
+                        : (panchayatNameHindi.isNotEmpty
+                            ? panchayatNameHindi
+                            : panchayatName),
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
@@ -241,22 +264,32 @@ class BeforeAfterCanvas extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        sarpanchNameHindi.isNotEmpty
-                            ? sarpanchNameHindi
-                            : sarpanchName,
+                        localizedSarpanchName.isNotEmpty
+                            ? localizedSarpanchName
+                            : (sarpanchNameHindi.isNotEmpty
+                                ? sarpanchNameHindi
+                                : sarpanchName),
                         style: const TextStyle(
                           fontSize: 21,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF173E32),
                         ),
                       ),
-                      const Text(
-                        'Sarpanch',
-                        style: TextStyle(
+                      Text(
+                        roleLabels[contentLanguage] ?? 'Sarpanch',
+                        style: const TextStyle(
                           fontSize: 16,
                           color: Color(0xFF52675D),
                         ),
                       ),
+                      if (location.isNotEmpty)
+                        Text(
+                          location,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Color(0xFF52675D),
+                          ),
+                        ),
                     ],
                   ),
                 ),

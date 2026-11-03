@@ -89,19 +89,26 @@ class BackendApiService {
     return url;
   }
 
-  Future<String> generatePostArtwork({
+  Future<Map<String, dynamic>> generatePostArtwork({
     required String postType,
     required String notes,
+    required String contentLanguage,
   }) async {
     final data = await _post('/api/posts/generate-image', {
       'postType': postType,
       'notes': notes,
+      'contentLanguage': contentLanguage,
     });
     final url = data['imageUrl']?.toString() ?? '';
     if (url.isEmpty) {
       throw StateError('The image generator did not return an artwork URL.');
     }
-    return url;
+    return {
+      'imageUrl': url,
+      'localizedProfile': Map<String, dynamic>.from(
+        data['localizedProfile'] as Map? ?? const {},
+      ),
+    };
   }
 
   Future<List<String>> generatePost(String postId) async {
