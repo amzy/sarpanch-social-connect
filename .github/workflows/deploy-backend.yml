@@ -62,6 +62,24 @@ jobs:
       - name: Check Worker types
         run: npm run check
 
+      - name: Provision free-tier media namespace
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          npx wrangler kv namespace list --json > /tmp/kv-namespaces.json
+          NAMESPACE_ID="$(node -e 'const a=require("/tmp/kv-namespaces.json"); const x=a.find(v=>v.title==="sarpanch-social-connect-media"); if(x) process.stdout.write(x.id);')"
+          if [ -z "$NAMESPACE_ID" ]; then
+            npx wrangler kv namespace create sarpanch-social-connect-media --json > /tmp/kv-created.json
+            NAMESPACE_ID="$(node -e 'const x=require("/tmp/kv-created.json"); process.stdout.write(x.id);')"
+          fi
+          if [ -z "$NAMESPACE_ID" ]; then
+            echo "Unable to provision the Workers KV media namespace."
+            exit 1
+          fi
+          NAMESPACE_ID="$NAMESPACE_ID" node -e 'const fs=require("fs"); const p="wrangler.toml"; const s=fs.readFileSync(p,"utf8"); if(!s.includes("__KV_NAMESPACE_ID__")) throw new Error("KV namespace placeholder missing"); fs.writeFileSync(p,s.replace("__KV_NAMESPACE_ID__",process.env.NAMESPACE_ID));'
+          echo "Workers KV media namespace is ready."
+
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:
