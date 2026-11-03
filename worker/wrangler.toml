@@ -8,6 +8,6 @@ FIREBASE_PROJECT_ID = "sarpanch-social-connect"
 META_GRAPH_VERSION = "v23.0"
 ALLOWED_ORIGINS = "https://amzy.github.io"
 
-[[r2_buckets]]
+[[kv_namespaces]]
 binding = "MEDIA_BUCKET"
-bucket_name = "sarpanch-social-connect-media"
+id = "__KV_NAMESPACE_ID__"
