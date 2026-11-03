@@ -295,7 +295,7 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
     const parsed = (await workersAiJson(env, captionPrompt(current.data, user.data, language, refresh), 1800, { type: "OBJECT", properties: { captions: { type: "ARRAY", minItems: 3, maxItems: 3, items: { type: "STRING" } } }, required: ["captions"] })) as { captions?: unknown };
     const captions = Array.isArray(parsed.captions) ? parsed.captions.map(String).map(s => s.trim()).filter(Boolean).slice(0, 3) : [];
     if (captions.length !== 3) throw new Error("AI did not return exactly three caption options.");
-    // Charge the app allowance only after Gemini has returned valid captions.
+    // Charge the app allowance only after Workers AI has returned valid captions.
     // Failed API calls, malformed output, and timeouts must not consume a slot.
     if (!refresh && !alreadyClaimed) {
       trace.stage = "claim_monthly_usage";
@@ -517,7 +517,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
         "Post type: " + postType,
         "Post details: " + notes,
       ].join("\n");
-      const suggestion = await geminiJson(env, prompt, 160, { type: "OBJECT", properties: { frameStyle: { type: "STRING", enum: ["classic", "celebration", "development", "announcement", "minimal", "tricolor"] } }, required: ["frameStyle"] }) as { frameStyle?: unknown };
+      const suggestion = await workersAiJson(env, prompt, 160, { type: "OBJECT", properties: { frameStyle: { type: "STRING", enum: ["classic", "celebration", "development", "announcement", "minimal", "tricolor"] } }, required: ["frameStyle"] }) as { frameStyle?: unknown };
       const frameStyle = String(suggestion.frameStyle ?? "");
       if (!["classic", "celebration", "development", "announcement", "minimal", "tricolor"].includes(frameStyle)) {
         fail("AI returned an unsupported frame style.", 502);
