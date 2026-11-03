@@ -7,7 +7,10 @@ export interface Env {
   META_GRAPH_VERSION?: string;
   ADMIN_BOOTSTRAP_UID?: string;
   ALLOWED_ORIGINS?: string;
-  MEDIA_BUCKET: { put(key: string, value: ArrayBuffer, options?: { httpMetadata?: { contentType?: string; cacheControl?: string } }): Promise<unknown>; get(key: string): Promise<{ body: ReadableStream | null; httpMetadata?: { contentType?: string }; httpEtag?: string } | null> };
+  MEDIA_BUCKET: {
+    put(key: string, value: ArrayBuffer, options?: { metadata?: { contentType: string } }): Promise<void>;
+    get(key: string, type: "arrayBuffer"): Promise<{ value: ArrayBuffer; metadata?: { contentType?: string } } | null>;
+  };
 }
 
 type Json = Record<string, unknown>;
@@ -352,13 +355,13 @@ async function handle(request: Request, env: Env): Promise<Response> {
   if (url.pathname.startsWith("/media/") && request.method === "GET") {
     const key = decodeURIComponent(url.pathname.slice("/media/".length));
     if (!/^[A-Za-z0-9_-]{1,128}\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_.-]{1,160}$/.test(key)) return new Response("Not found", { status: 404 });
-    const object = await env.MEDIA_BUCKET.get(key);
-    if (!object?.body) return new Response("Not found", { status: 404 });
-    return new Response(object.body, { headers: {
-      "content-type": object.httpMetadata?.contentType ?? "application/octet-stream",
+    const object = await env.MEDIA_BUCKET.get(key, "arrayBuffer");
+    if (!object) return new Response("Not found", { status: 404 });
+    return new Response(object.value, { headers: {
+      "content-type": object.metadata?.contentType ?? "application/octet-stream",
       "cache-control": "public, max-age=31536000, immutable",
       "access-control-allow-origin": "*",
-      "etag": object.httpEtag ?? "",
+      "cross-origin-resource-policy": "cross-origin",
     }});
   }
   if (request.method !== "POST" || !url.pathname.startsWith("/api/")) return response({ error: "Not found." }, 404, origin);
@@ -374,7 +377,9 @@ async function handle(request: Request, env: Env): Promise<Response> {
       if (!encoded || encoded.length > 11_200_000) fail("Image must be smaller than 8 MB.", 413);
       const binary = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
       if (binary.byteLength > 8 * 1024 * 1024) fail("Image must be smaller than 8 MB.", 413);
-      await env.MEDIA_BUCKET.put(key, arrayBuffer(binary), { httpMetadata: { contentType, cacheControl: "public, max-age=31536000, immutable" } });
+      // KV stores media bytes directly. Keep uploads below 8 MiB to stay within
+      // the Workers Free KV value-size limit and avoid unexpected paid services.
+      await env.MEDIA_BUCKET.put(key, arrayBuffer(binary), { metadata: { contentType } });
       return response({ url: new URL("/media/" + key.split("/").map(encodeURIComponent).join("/"), request.url).toString(), size: binary.byteLength }, 201, origin);
     }
     const body = await request.json() as Json;
