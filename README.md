@@ -6,7 +6,7 @@ Approval-first social publishing for Gram Panchayats. Flutter + Firebase Spark +
 
 - Flutter: Android, iOS and GitHub Pages web app.
 - Firebase Spark: Phone Authentication and Firestore.
-- Cloudflare Workers Free: one TypeScript HTTPS API for Gemini, authorization, captions, transliteration, media uploads and social publishing. Cloudflare R2 stores post visuals.
+- Cloudflare Workers Free: one TypeScript HTTPS API for Gemini, authorization, captions, transliteration, media uploads and social publishing. Cloudflare Workers KV stores profile and post media within free-tier limits.
 - Gemini API: captions and Hindi transliteration. The key stays in Worker secrets.
 - No Firebase Cloud Functions, no Blaze upgrade, no Firebase Storage dependency, no D1, no Queues and no Cloud KMS.
 
@@ -19,7 +19,7 @@ All endpoints except GET /health require Authorization: Bearer <Firebase ID toke
 | Endpoint | Purpose |
 |---|---|
 | POST /api/posts/generate | Generate three captions for an owned pending_ai post |
-| POST /api/media/upload | Authenticated owner-scoped upload to Cloudflare R2 |
+| POST /api/media/upload | Authenticated owner-scoped upload to Workers KV |
 | POST /api/posts/more-options | Generate three new captions; maximum five refreshes |
 | POST /api/profile/transliterate | Transliterate an Indian name into Devanagari |
 | POST /api/posts/approve-and-publish | Save edited caption, approve and publish |
@@ -40,9 +40,11 @@ Create a dedicated service account in the existing Google Cloud project, for exa
 
 Copy the Firebase Web API key from lib/firebase_options.dart (web apiKey).
 
-### Cloudflare Worker Free
+### Cloudflare Worker Free + Workers KV
 
-Create an R2 bucket named `sarpanch-social-connect-media` in the Cloudflare dashboard (R2 free tier quotas apply). The Worker serves saved images through its `/media/` route; no public bucket access is required.
+No paid plan or billing details are required for the intended free-tier setup. The GitHub Actions deployment workflow automatically finds or creates the Workers KV namespace named `sarpanch-social-connect-media`, injects its namespace ID into the deployment configuration, and deploys the Worker. No R2 bucket is used. Uploaded profile images and post visuals are served through the Worker `/media/` route. Uploads are limited to 8 MB per file; keep usage within Cloudflare Workers KV free-tier storage and operation quotas. KV is suitable for this small app's low-volume media, but it is not a substitute for a dedicated large-media object store.
+
+For local `wrangler dev`, create the namespace once with `npx wrangler kv namespace create sarpanch-social-connect-media`, then replace `__KV_NAMESPACE_ID__` in your local `wrangler.toml` with the returned ID. Do not commit a placeholder or secret.
 
 From worker/:
 
@@ -90,7 +92,7 @@ Provider OAuth consent and token refresh are not yet implemented. Until then, cr
 
 ## Limits and safety
 
-- Cloudflare, Gemini, Meta and X each have independent quotas and policies.
+- Cloudflare Workers and KV, Gemini, Meta and X each have independent quotas and policies. The media upload path is intentionally capped at 8 MB per file; large-volume media hosting is outside this free-tier design.
 - This request-driven design does not promise unattended scheduled publishing.
 - Firestore update-time preconditions reject stale concurrent writes. A client disconnect can still occur after an external API has started processing.
 - Service-account JSON, Gemini keys, social tokens and encryption keys must never be committed or pasted into chat.
