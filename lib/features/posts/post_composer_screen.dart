@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../services/image_upload_service.dart';
+import '../../services/local_prompt_compiler.dart';
 import '../../services/backend_api_service.dart';
 import '../../services/retry_queue_service.dart';
 import 'before_after_canvas.dart';
@@ -28,6 +29,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   final _picker = ImagePicker();
   final _uploads = ImageUploadService();
   final _retryQueue = RetryQueueService();
+  static const _promptCompiler = LocalPromptCompiler();
   XFile? _before;
   XFile? _after;
   Uint8List? _beforeBytes;
@@ -140,7 +142,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
     try {
       final suggestion = await BackendApiService().suggestPostFrame(
         postType: _type,
-        notes: _notes.text.trim(),
+        notes: _promptCompiler.compile(_notes.text),
       );
       if (!mounted) return;
       setState(() => _frameStyle = suggestion);
@@ -159,6 +161,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
           () => _error = 'Describe the update before generating captions.');
       return;
     }
+    final promptNotes = _promptCompiler.compile(_notes.text);
     setState(() {
       _saving = true;
       _error = null;
@@ -208,6 +211,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         'type': _type,
         'contentLanguage': _contentLanguage,
         'rawNotes': _notes.text.trim(),
+        'promptNotes': promptNotes,
         'beforeImageUrl': beforeUrl,
         'afterImageUrl': afterUrl,
         'finalCompositedImage': imageUrl,
@@ -232,6 +236,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
           'postId': postId,
           'type': _type,
           'rawNotes': _notes.text.trim(),
+          'promptNotes': promptNotes,
           'error': error.toString(),
         });
       }
