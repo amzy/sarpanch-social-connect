@@ -2,7 +2,8 @@ export interface Env {
   FIREBASE_PROJECT_ID: string;
   FIREBASE_WEB_API_KEY: string;
   GOOGLE_SERVICE_ACCOUNT_JSON: string;
-  GEMINI_API_KEY: string;
+  AI: { run(model: string, inputs: Json): Promise<any> };
+  AI_MODEL?: string;
   SOCIAL_ENCRYPTION_KEY: string;
   META_GRAPH_VERSION?: string;
   ADMIN_BOOTSTRAP_UID?: string;
@@ -166,58 +167,50 @@ async function createDoc(env: Env, path: string, fields: Json): Promise<void> {
   }, body: JSON.stringify({ fields: encodeFields(fields) }) });
   if (!result.ok) throw new Error(`Firestore create failed (${result.status}): ${(await result.text()).slice(0, 300)}`);
 }
-async function gemini(
-  env: Env, prompt: string, temperature = 0.55, maxOutputTokens = 700, responseSchema?: Json,
-): Promise<string> {
-  const generationConfig: Json = { temperature, maxOutputTokens };
-  if (responseSchema) {
-    generationConfig.responseMimeType = "application/json";
-    generationConfig.responseSchema = responseSchema;
-  }
-  const result = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(env.GEMINI_API_KEY), {
-    method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig }),
-  });
-  // Read the HTTP body as text first: Response.json() throws a raw
-  // SyntaxError on truncated responses, before the structured-output retry
-  // layer can classify and retry the transient failure.
-  const responseText = await result.text();
-  let data: any;
+const DEFAULT_AI_MODEL = "@cf/zai-org/glm-4.7-flash";
+
+async function workersAi(env: Env, prompt: string, temperature = 0.55, maxOutputTokens = 700): Promise<string> {
+  const model = env.AI_MODEL?.trim() || DEFAULT_AI_MODEL;
+  let result: any;
   try {
-    data = JSON.parse(responseText);
-  } catch {
-    if (result.ok) {
-      throw new Error("Gemini HTTP response was incomplete or invalid JSON.");
-    }
-    throw new Error(`Gemini returned an unreadable error response (HTTP ${result.status}).`);
+    result = await env.AI.run(model, {
+      messages: [
+        { role: "system", content: "You are a precise multilingual assistant. Follow the instructions exactly. Do not invent facts." },
+        { role: "user", content: prompt },
+      ],
+      temperature,
+      max_tokens: maxOutputTokens,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error("Cloudflare Workers AI request failed (" + model + "): " + message.slice(0, 300));
   }
-  if (!result.ok) throw new Error(data.error?.message ?? "Gemini request failed.");
-  const candidate = data.candidates?.[0];
-  if (candidate?.finishReason === "MAX_TOKENS") throw new Error("Gemini response reached its output limit. Please retry.");
-  const text = candidate?.content?.parts?.map((part: any) => part.text ?? "").join("").trim();
-  if (!text) throw new Error("Gemini returned an empty response.");
-  return text;
+  const output = typeof result === "string" ? result :
+    typeof result?.response === "string" ? result.response :
+    typeof result?.output_text === "string" ? result.output_text : "";
+  if (!output.trim()) throw new Error("Cloudflare Workers AI returned an empty response (" + model + ").");
+  return output.trim();
 }
 function jsonFromModel(text: string): any {
   const cleaned = text.replace(/^\s*```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
   return JSON.parse(cleaned);
 }
 
-// Gemini's structured output can occasionally arrive truncated or invalid.
-// Retry once with a stricter JSON-only instruction before failing the post.
-async function geminiJson(
+// Workers AI does not guarantee schema-constrained JSON for every model.
+// Validate locally and retry once with an explicit JSON-only schema instruction.
+async function workersAiJson(
   env: Env, prompt: string, maxOutputTokens: number, responseSchema: Json,
 ): Promise<any> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const retryPrompt = attempt === 0 ? prompt : [
       prompt,
       "IMPORTANT: Your previous response was incomplete or invalid JSON.",
-      "Return one complete JSON object matching the supplied response schema.",
+      "Return one complete JSON object matching this JSON schema: " + JSON.stringify(responseSchema),
       "Do not use markdown fences, comments, or text outside the JSON object.",
       "Keep every string concise and close all quotes, arrays, and braces.",
     ].join("\n");
     try {
-      const output = await gemini(env, retryPrompt, 0.25, maxOutputTokens, responseSchema);
+      const output = await workersAi(env, retryPrompt, 0.25, maxOutputTokens);
       try {
         return jsonFromModel(output);
       } catch (error) {
@@ -229,7 +222,7 @@ async function geminiJson(
       if (!retryable) throw error;
     }
   }
-  throw new Error("Gemini returned incomplete structured data twice. No caption was saved. Please retry in a moment.");
+  throw new Error("Cloudflare Workers AI returned incomplete structured data twice. No caption was saved. Please retry in a moment.");
 }
 function monthKey(): string {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit" }).formatToParts(new Date());
@@ -298,11 +291,11 @@ async function generateForPost(env: Env, uid: string, postId: string, refresh: b
   }
   let usageClaimedThisAttempt = false;
   try {
-    trace.stage = "gemini_generate_and_parse";
-    const parsed = (await geminiJson(env, captionPrompt(current.data, user.data, language, refresh), 1800, { type: "OBJECT", properties: { captions: { type: "ARRAY", minItems: 3, maxItems: 3, items: { type: "STRING" } } }, required: ["captions"] })) as { captions?: unknown };
+    trace.stage = "workers_ai_generate_and_parse";
+    const parsed = (await workersAiJson(env, captionPrompt(current.data, user.data, language, refresh), 1800, { type: "OBJECT", properties: { captions: { type: "ARRAY", minItems: 3, maxItems: 3, items: { type: "STRING" } } }, required: ["captions"] })) as { captions?: unknown };
     const captions = Array.isArray(parsed.captions) ? parsed.captions.map(String).map(s => s.trim()).filter(Boolean).slice(0, 3) : [];
-    if (captions.length !== 3) throw new Error("Gemini did not return exactly three caption options.");
-    // Charge the app allowance only after Gemini has returned valid captions.
+    if (captions.length !== 3) throw new Error("AI did not return exactly three caption options.");
+    // Charge the app allowance only after Workers AI has returned valid captions.
     // Failed API calls, malformed output, and timeouts must not consume a slot.
     if (!refresh && !alreadyClaimed) {
       trace.stage = "claim_monthly_usage";
@@ -524,7 +517,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
         "Post type: " + postType,
         "Post details: " + notes,
       ].join("\n");
-      const suggestion = await geminiJson(env, prompt, 160, { type: "OBJECT", properties: { frameStyle: { type: "STRING", enum: ["classic", "celebration", "development", "announcement", "minimal", "tricolor"] } }, required: ["frameStyle"] }) as { frameStyle?: unknown };
+      const suggestion = await workersAiJson(env, prompt, 160, { type: "OBJECT", properties: { frameStyle: { type: "STRING", enum: ["classic", "celebration", "development", "announcement", "minimal", "tricolor"] } }, required: ["frameStyle"] }) as { frameStyle?: unknown };
       const frameStyle = String(suggestion.frameStyle ?? "");
       if (!["classic", "celebration", "development", "announcement", "minimal", "tricolor"].includes(frameStyle)) {
         fail("AI returned an unsupported frame style.", 502);
@@ -534,7 +527,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
     if (url.pathname === "/api/profile/transliterate") {
       const text = String(body.text ?? "").trim();
       if (!text || text.length > 120) fail("Enter a name up to 120 characters.");
-      const suggestion = (await gemini(env, [
+      const suggestion = (await workersAi(env, [
         "Transliterate this Indian proper name from English letters into Devanagari Hindi script.",
         "Do phonetic transliteration only; do not translate, explain, add titles or invent details.",
         "Return only the Devanagari name, without quotes or commentary.", "Name: " + text,
