@@ -310,7 +310,7 @@ class _ApprovalCardState extends State<_ApprovalCard> {
             const SizedBox(height: 12),
             OutlinedButton.icon(
               onPressed: _busy ? null : _chooseManualDestination,
-              icon: const Icon(Icons.ios_share_outlined),
+              icon: const Icon(Icons.share_outlined),
               label: const Text('Share manually to a platform'),
             ),
             Row(
