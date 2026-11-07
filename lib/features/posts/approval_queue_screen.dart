@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/backend_api_service.dart';
 import 'package:flutter/material.dart';
 
-import '../../l10n/app_localizations.dart';
 import '../share/local_share_service.dart';
 import 'data/post_repository.dart';
 
@@ -12,7 +11,6 @@ class ApprovalQueueScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppLocalizations.of(context)!;
     final uid = FirebaseAuth.instance.currentUser!.uid;
     final stream = PostRepository().watchPendingApproval(uid);
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
@@ -110,40 +108,55 @@ class _ApprovalCardState extends State<_ApprovalCard> {
     }
   }
 
-  Future<void> _shareWhatsApp(String destination) async {
-    final data = widget.post.data();
-    final destinationName = destination == 'group'
-        ? 'Panchayat WhatsApp Group'
-        : 'Panchayat WhatsApp Channel';
-    final guidance = destination == 'group'
-        ? 'In the share sheet, choose WhatsApp and select the official Panchayat group.'
-        : 'Share the image and caption to WhatsApp, then open the official Panchayat Channel and publish the update there.';
+  Future<void> _shareToDestination(String destination) async {
+    const names = <String, String>{
+      'facebook': 'Facebook',
+      'instagram': 'Instagram',
+      'threads': 'Threads',
+      'whatsapp_group': 'WhatsApp Group',
+      'whatsapp_channel': 'WhatsApp Channel',
+      'other': 'another app',
+    };
+    final destinationName = names[destination]!;
+    final guidance = switch (destination) {
+      'whatsapp_group' =>
+        'Choose WhatsApp in the share sheet, select the Panchayat group, then tap Send.',
+      'whatsapp_channel' =>
+        'Choose WhatsApp in the share sheet. Then open your Channel and publish the prepared update.',
+      'facebook' =>
+        'Choose Facebook in the share sheet. Select the Page or destination and finish the post inside Facebook.',
+      'instagram' =>
+        'Choose Instagram if it appears. Complete the post inside Instagram; some devices may require saving the image and creating the post there.',
+      'threads' =>
+        'Choose Threads if it appears. Review the image and caption and publish inside Threads.',
+      _ => 'Choose an installed app from the share sheet and finish sharing there.',
+    };
+
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Share to $destinationName'),
+        content: Text('$guidance\n\nSarpanch Social Connect will not publish automatically to this destination.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+    if (proceed != true || !mounted) return;
 
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
-      final proceed = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text('Share to $destinationName'),
-          content: Text(guidance),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('Continue'),
-            ),
-          ],
-        ),
-      );
-      if (proceed != true || !mounted) return;
-      // Continue with the platform share sheet. The app never assumes that
-      // returning from the sheet means the content was actually delivered.
+      final data = widget.post.data();
       await LocalShareService().sharePost(
         imageUrl: (data['finalCompositedImage'] as String?) ?? '',
         caption: _caption.text.trim(),
@@ -152,9 +165,8 @@ class _ApprovalCardState extends State<_ApprovalCard> {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('Confirm WhatsApp delivery'),
-          content: Text(
-              'Did you successfully share this update to the $destinationName?'),
+          title: const Text('Confirm sharing'),
+          content: Text('Did you finish publishing this update to $destinationName inside that app?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
@@ -168,33 +180,54 @@ class _ApprovalCardState extends State<_ApprovalCard> {
         ),
       );
       if (confirmed == true) {
-        await BackendApiService().recordWhatsAppDelivery(
+        await BackendApiService().recordManualShare(
           postId: widget.post.id,
           destination: destination,
         );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$destinationName marked as confirmed.')),
+            SnackBar(content: Text('$destinationName marked as manually shared.')),
           );
         }
       }
     } catch (error) {
-      if (mounted) setState(() => _error = 'WhatsApp share failed: $error');
+      if (mounted) setState(() => _error = 'Manual share failed: $error');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  Future<void> _share() async {
-    final data = widget.post.data();
-    try {
-      await LocalShareService().sharePost(
-        imageUrl: (data['finalCompositedImage'] as String?) ?? '',
-        caption: _caption.text.trim(),
-      );
-    } catch (error) {
-      if (mounted) setState(() => _error = 'Share failed: $error');
-    }
+  Future<void> _chooseManualDestination() async {
+    const destinations = <(String, String, IconData)>[
+      ('facebook', 'Facebook', Icons.facebook),
+      ('instagram', 'Instagram', Icons.camera_alt_outlined),
+      ('threads', 'Threads', Icons.alternate_email),
+      ('whatsapp_group', 'WhatsApp Group', Icons.groups_outlined),
+      ('whatsapp_channel', 'WhatsApp Channel', Icons.campaign_outlined),
+      ('other', 'Other installed app', Icons.ios_share_outlined),
+    ];
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const ListTile(
+              title: Text('Choose a destination'),
+              subtitle: Text('Manual sharing opens your device share sheet. You must finish the post in the selected app.'),
+            ),
+            ...destinations.map((item) => ListTile(
+                  leading: Icon(item.$3),
+                  title: Text(item.$2),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.pop(sheetContext, item.$1),
+                )),
+          ],
+        ),
+      ),
+    );
+    if (selected != null && mounted) await _shareToDestination(selected);
   }
 
   @override
@@ -276,19 +309,9 @@ class _ApprovalCardState extends State<_ApprovalCard> {
             ),
             const SizedBox(height: 12),
             OutlinedButton.icon(
-              onPressed: _busy ? null : _share,
-              icon: const Icon(Icons.share_outlined),
-              label: Text(strings.share),
-            ),
-            OutlinedButton.icon(
-              onPressed: _busy ? null : () => _shareWhatsApp('group'),
-              icon: const Icon(Icons.groups_outlined),
-              label: const Text('Share to Panchayat WhatsApp Group'),
-            ),
-            OutlinedButton.icon(
-              onPressed: _busy ? null : () => _shareWhatsApp('channel'),
-              icon: const Icon(Icons.campaign_outlined),
-              label: const Text('Publish to Panchayat WhatsApp Channel'),
+              onPressed: _busy ? null : _chooseManualDestination,
+              icon: const Icon(Icons.ios_share_outlined),
+              label: const Text('Share manually to a platform'),
             ),
             Row(
               children: [
