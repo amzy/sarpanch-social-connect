@@ -102,8 +102,9 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         _error = null;
       });
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error = 'Could not select the post file: $error');
+      }
     }
   }
 
@@ -122,8 +123,9 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         _error = null;
       });
     } catch (error) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error = 'Could not select the photo: $error');
+      }
     }
   }
 

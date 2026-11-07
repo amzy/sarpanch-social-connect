@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/backend_api_service.dart';
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
+
 import '../share/local_share_service.dart';
 import 'data/post_repository.dart';
 
@@ -11,6 +13,7 @@ class ApprovalQueueScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context)!;
     final uid = FirebaseAuth.instance.currentUser!.uid;
     final stream = PostRepository().watchPendingApproval(uid);
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
