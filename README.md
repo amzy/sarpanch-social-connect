@@ -4,7 +4,7 @@ Approval-first social publishing for Gram Panchayats. Flutter + Firebase Spark +
 
 ## Architecture
 
-- Flutter: Android, iOS and GitHub Pages web app.
+- Flutter: Android, iOS and GitHub Pages web app. Post creation supports both the existing AI-assisted poster composer and uploading a ready-made JPG, PNG or WebP image from Files or the device camera/gallery; both paths enter the same caption approval queue.
 - Firebase Spark: Phone Authentication and Firestore.
 - Cloudflare Workers Free: one TypeScript HTTPS API for Gemini, authorization, captions, transliteration, media uploads and social publishing. Cloudflare Workers KV stores profile and post media within free-tier limits.
 - Gemini API: captions and Hindi transliteration. The key stays in Worker secrets.
