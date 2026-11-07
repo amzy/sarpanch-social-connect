@@ -73,7 +73,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   Future<void> _chooseExistingPostFromFile() async {
     try {
       final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
+        type: FileType.custom,
+        allowedExtensions: const ['jpg', 'jpeg', 'png', 'webp'],
         allowMultiple: false,
         withData: true,
       );
