@@ -204,7 +204,7 @@ class _ApprovalCardState extends State<_ApprovalCard> {
       ('threads', 'Threads', Icons.alternate_email),
       ('whatsapp_group', 'WhatsApp Group', Icons.groups_outlined),
       ('whatsapp_channel', 'WhatsApp Channel', Icons.campaign_outlined),
-      ('other', 'Other installed app', Icons.ios_share_outlined),
+      ('other', 'Other installed app', Icons.share_outlined),
     ];
     final selected = await showModalBottomSheet<String>(
       context: context,
