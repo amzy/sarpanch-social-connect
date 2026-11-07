@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:image_picker/image_picker.dart';
@@ -30,6 +31,9 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   final _uploads = ImageUploadService();
   final _retryQueue = RetryQueueService();
   static const _promptCompiler = LocalPromptCompiler();
+  bool _uploadExistingPost = false;
+  XFile? _uploadedPost;
+  Uint8List? _uploadedPostBytes;
   XFile? _before;
   XFile? _after;
   Uint8List? _beforeBytes;
@@ -64,6 +68,130 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
   void dispose() {
     _notes.dispose();
     super.dispose();
+  }
+
+  Future<void> _chooseExistingPostFromFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        allowMultiple: false,
+        withData: true,
+      );
+      if (result == null || result.files.isEmpty || !mounted) return;
+      final selected = result.files.single;
+      final bytes = selected.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        throw Exception('Unable to read the selected image file.');
+      }
+      if (bytes.length > ImageUploadService.maxBytes) {
+        throw Exception('Choose an image smaller than 8 MB.');
+      }
+      final file = XFile.fromData(
+        bytes,
+        name: selected.name,
+        mimeType: selected.extension?.toLowerCase() == 'png'
+            ? 'image/png'
+            : selected.extension?.toLowerCase() == 'webp'
+                ? 'image/webp'
+                : 'image/jpeg',
+      );
+      setState(() {
+        _uploadedPost = file;
+        _uploadedPostBytes = bytes;
+        _error = null;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Could not select the post file: $error');
+    }
+  }
+
+  Future<void> _chooseExistingPostFromDevice(ImageSource source) async {
+    try {
+      final file = await _picker.pickImage(source: source, imageQuality: 95);
+      if (file == null || !mounted) return;
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) throw Exception('The selected photo is empty.');
+      if (bytes.length > ImageUploadService.maxBytes) {
+        throw Exception('Choose a photo smaller than 8 MB.');
+      }
+      setState(() {
+        _uploadedPost = file;
+        _uploadedPostBytes = bytes;
+        _error = null;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Could not select the photo: $error');
+    }
+  }
+
+  Future<void> _submitExistingPost() async {
+    final user = FirebaseAuth.instance.currentUser;
+    final file = _uploadedPost;
+    if (user == null) return;
+    if (file == null || _uploadedPostBytes == null) {
+      setState(() => _error = 'Choose an existing post image first.');
+      return;
+    }
+    if (_notes.text.trim().isEmpty) {
+      setState(() => _error = 'Add a caption or describe this post before continuing.');
+      return;
+    }
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    final postId = const Uuid().v4();
+    var postCreated = false;
+    try {
+      final imageUrl = await _uploads.uploadFile(
+        uid: user.uid,
+        path: 'users/${user.uid}/posts/$postId-uploaded.${file.name.split('.').last}',
+        file: file,
+      );
+      await PostRepository().createPost({
+        'postId': postId,
+        'uid': user.uid,
+        'type': _type,
+        'contentLanguage': _contentLanguage,
+        'rawNotes': _notes.text.trim(),
+        'promptNotes': _promptCompiler.compile(_notes.text),
+        'beforeImageUrl': '',
+        'afterImageUrl': '',
+        'finalCompositedImage': imageUrl,
+        'source': 'user_uploaded',
+        'status': 'pending_ai',
+        'scheduledTime': null,
+      });
+      postCreated = true;
+      try {
+        await BackendApiService().generatePost(postId);
+      } catch (generationError) {
+        try {
+          await PostRepository().markGenerationFailed(postId, generationError.toString());
+        } catch (_) {}
+        rethrow;
+      }
+      if (mounted) Navigator.of(context).pop();
+    } catch (error) {
+      if (!postCreated) {
+        await _retryQueue.enqueue({
+          'kind': 'post_submission',
+          'postId': postId,
+          'type': _type,
+          'rawNotes': _notes.text.trim(),
+          'promptNotes': _promptCompiler.compile(_notes.text),
+          'source': 'user_uploaded',
+          'error': error.toString(),
+        });
+      }
+      if (mounted) {
+        setState(() => _error = postCreated
+            ? 'Your uploaded post was saved, but caption generation failed. Open the Failed tab to retry. $error'
+            : 'Could not submit your uploaded post. A retry record was saved on this device. $error');
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<void> _choose(bool before) async {
@@ -289,6 +417,28 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment<bool>(
+                value: false,
+                icon: Icon(Icons.auto_awesome),
+                label: Text('Create new post'),
+              ),
+              ButtonSegment<bool>(
+                value: true,
+                icon: Icon(Icons.upload_file_outlined),
+                label: Text('Upload existing post'),
+              ),
+            ],
+            selected: {_uploadExistingPost},
+            onSelectionChanged: _saving
+                ? null
+                : (selection) => setState(() {
+                      _uploadExistingPost = selection.first;
+                      _error = null;
+                    }),
+          ),
+          const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             initialValue: _type,
             decoration: const InputDecoration(labelText: 'Post type'),
@@ -335,6 +485,68 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
             ),
           ),
           const SizedBox(height: 14),
+          if (_uploadExistingPost) ...[
+            Text('Upload your ready-made post',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(
+              'Use a poster image from Files, choose a photo from your device, or take a new photo. Add the caption or post details below.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            if (_uploadedPostBytes != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: Image.memory(
+                  _uploadedPostBytes!,
+                  height: 280,
+                  fit: BoxFit.contain,
+                ),
+              )
+            else
+              Container(
+                height: 180,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add_photo_alternate_outlined, size: 42),
+                      SizedBox(height: 8),
+                      Text('No post image selected'),
+                    ],
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _saving ? null : _chooseExistingPostFromFile,
+              icon: const Icon(Icons.folder_open_outlined),
+              label: const Text('Choose image from Files'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _saving ? null : () => _chooseExistingPostFromDevice(ImageSource.gallery),
+              icon: const Icon(Icons.photo_library_outlined),
+              label: const Text('Choose photo from device'),
+            ),
+            OutlinedButton.icon(
+              onPressed: _saving ? null : () => _chooseExistingPostFromDevice(ImageSource.camera),
+              icon: const Icon(Icons.photo_camera_outlined),
+              label: const Text('Take a photo'),
+            ),
+            if (_uploadedPost != null)
+              TextButton.icon(
+                onPressed: _saving ? null : () => setState(() {
+                  _uploadedPost = null;
+                  _uploadedPostBytes = null;
+                }),
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Remove selected image'),
+              ),
+          ] else ...[
           Text('Choose poster frame',
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
@@ -479,6 +691,7 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
               ),
             ),
           ),
+          ],
           if (_error != null)
             Padding(
               padding: const EdgeInsets.only(top: 12),
@@ -489,11 +702,11 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
             ),
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: _saving ? null : _submit,
-            icon: const Icon(Icons.auto_awesome),
+            onPressed: _saving ? null : (_uploadExistingPost ? _submitExistingPost : _submit),
+            icon: Icon(_uploadExistingPost ? Icons.upload_file_outlined : Icons.auto_awesome),
             label: _saving
                 ? const Text('Preparing…')
-                : const Text('Generate caption for approval'),
+                : Text(_uploadExistingPost ? 'Upload post for caption approval' : 'Generate caption for approval'),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(54),
             ),
