@@ -102,7 +102,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         _error = null;
       });
     } catch (error) {
-      if (mounted) setState(() => _error = 'Could not select the post file: $error');
+      if (mounted)
+        setState(() => _error = 'Could not select the post file: $error');
     }
   }
 
@@ -121,7 +122,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         _error = null;
       });
     } catch (error) {
-      if (mounted) setState(() => _error = 'Could not select the photo: $error');
+      if (mounted)
+        setState(() => _error = 'Could not select the photo: $error');
     }
   }
 
@@ -134,7 +136,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
       return;
     }
     if (_notes.text.trim().isEmpty) {
-      setState(() => _error = 'Add a caption or describe this post before continuing.');
+      setState(() =>
+          _error = 'Add a caption or describe this post before continuing.');
       return;
     }
     setState(() {
@@ -146,7 +149,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
     try {
       final imageUrl = await _uploads.uploadFile(
         uid: user.uid,
-        path: 'users/${user.uid}/posts/$postId-uploaded.${file.name.split('.').last}',
+        path:
+            'users/${user.uid}/posts/$postId-uploaded.${file.name.split('.').last}',
         file: file,
       );
       await PostRepository().createPost({
@@ -168,7 +172,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
         await BackendApiService().generatePost(postId);
       } catch (generationError) {
         try {
-          await PostRepository().markGenerationFailed(postId, generationError.toString());
+          await PostRepository()
+              .markGenerationFailed(postId, generationError.toString());
         } catch (_) {}
         rethrow;
       }
@@ -508,7 +513,8 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
               Container(
                 height: 180,
                 decoration: BoxDecoration(
-                  border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                  border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: const Center(
@@ -529,169 +535,176 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
               label: const Text('Choose image from Files'),
             ),
             OutlinedButton.icon(
-              onPressed: _saving ? null : () => _chooseExistingPostFromDevice(ImageSource.gallery),
+              onPressed: _saving
+                  ? null
+                  : () => _chooseExistingPostFromDevice(ImageSource.gallery),
               icon: const Icon(Icons.photo_library_outlined),
               label: const Text('Choose photo from device'),
             ),
             OutlinedButton.icon(
-              onPressed: _saving ? null : () => _chooseExistingPostFromDevice(ImageSource.camera),
+              onPressed: _saving
+                  ? null
+                  : () => _chooseExistingPostFromDevice(ImageSource.camera),
               icon: const Icon(Icons.photo_camera_outlined),
               label: const Text('Take a photo'),
             ),
             if (_uploadedPost != null)
               TextButton.icon(
-                onPressed: _saving ? null : () => setState(() {
-                  _uploadedPost = null;
-                  _uploadedPostBytes = null;
-                }),
+                onPressed: _saving
+                    ? null
+                    : () => setState(() {
+                          _uploadedPost = null;
+                          _uploadedPostBytes = null;
+                        }),
                 icon: const Icon(Icons.delete_outline),
                 label: const Text('Remove selected image'),
               ),
           ] else ...[
-          Text('Choose poster frame',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              ChoiceChip(
-                label: const Text('Classic'),
-                selected: _frameStyle == 'classic',
-                onSelected: _saving
-                    ? null
-                    : (_) => setState(() => _frameStyle = 'classic'),
-              ),
-              ChoiceChip(
-                label: const Text('Celebration'),
-                selected: _frameStyle == 'celebration',
-                onSelected: _saving
-                    ? null
-                    : (_) => setState(() => _frameStyle = 'celebration'),
-              ),
-              ChoiceChip(
-                label: const Text('Development'),
-                selected: _frameStyle == 'development',
-                onSelected: _saving
-                    ? null
-                    : (_) => setState(() => _frameStyle = 'development'),
-              ),
-              ChoiceChip(
-                label: const Text('Announcement'),
-                selected: _frameStyle == 'announcement',
-                onSelected: _saving
-                    ? null
-                    : (_) => setState(() => _frameStyle = 'announcement'),
-              ),
-              ChoiceChip(
-                label: const Text('Minimal'),
-                selected: _frameStyle == 'minimal',
-                onSelected: _saving
-                    ? null
-                    : (_) => setState(() => _frameStyle = 'minimal'),
-              ),
-              ChoiceChip(
-                label: const Text('India tricolour'),
-                selected: _frameStyle == 'tricolor',
-                onSelected: _saving
-                    ? null
-                    : (_) => setState(() => _frameStyle = 'tricolor'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Selected: ${_frameStyle == 'tricolor' ? 'India tricolour' : _frameStyle[0].toUpperCase() + _frameStyle.substring(1)}',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          OutlinedButton.icon(
-            onPressed: _saving ? null : _suggestFrame,
-            icon: const Icon(Icons.auto_awesome),
-            label: const Text('Suggest frame with AI'),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _saving ? null : () => _choose(true),
-            icon: const Icon(Icons.add_photo_alternate_outlined),
-            label: Text(_before == null
-                ? 'Add BEFORE photo (optional)'
-                : 'Change BEFORE photo'),
-          ),
-          if (_before != null)
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => setState(() {
-                  _before = null;
-                  _beforeBytes = null;
-                }),
-                child: const Text('Remove before photo'),
-              ),
+            Text('Choose poster frame',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ChoiceChip(
+                  label: const Text('Classic'),
+                  selected: _frameStyle == 'classic',
+                  onSelected: _saving
+                      ? null
+                      : (_) => setState(() => _frameStyle = 'classic'),
+                ),
+                ChoiceChip(
+                  label: const Text('Celebration'),
+                  selected: _frameStyle == 'celebration',
+                  onSelected: _saving
+                      ? null
+                      : (_) => setState(() => _frameStyle = 'celebration'),
+                ),
+                ChoiceChip(
+                  label: const Text('Development'),
+                  selected: _frameStyle == 'development',
+                  onSelected: _saving
+                      ? null
+                      : (_) => setState(() => _frameStyle = 'development'),
+                ),
+                ChoiceChip(
+                  label: const Text('Announcement'),
+                  selected: _frameStyle == 'announcement',
+                  onSelected: _saving
+                      ? null
+                      : (_) => setState(() => _frameStyle = 'announcement'),
+                ),
+                ChoiceChip(
+                  label: const Text('Minimal'),
+                  selected: _frameStyle == 'minimal',
+                  onSelected: _saving
+                      ? null
+                      : (_) => setState(() => _frameStyle = 'minimal'),
+                ),
+                ChoiceChip(
+                  label: const Text('India tricolour'),
+                  selected: _frameStyle == 'tricolor',
+                  onSelected: _saving
+                      ? null
+                      : (_) => setState(() => _frameStyle = 'tricolor'),
+                ),
+              ],
             ),
-          OutlinedButton.icon(
-            onPressed: _saving ? null : () => _choose(false),
-            icon: const Icon(Icons.add_photo_alternate_outlined),
-            label: Text(_after == null
-                ? 'Add AFTER photo (optional)'
-                : 'Change AFTER photo'),
-          ),
-          if (_after != null)
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => setState(() {
-                  _after = null;
-                  _afterBytes = null;
-                }),
-                child: const Text('Remove after photo'),
-              ),
+            const SizedBox(height: 6),
+            Text(
+              'Selected: ${_frameStyle == 'tricolor' ? 'India tricolour' : _frameStyle[0].toUpperCase() + _frameStyle.substring(1)}',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Stack photos vertically'),
-            value: _stacked,
-            onChanged: (_before == null && _after == null)
-                ? null
-                : (value) => setState(() => _stacked = value),
-          ),
-          const SizedBox(height: 16),
-          Text('Preview', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          ClipRect(
-            child: FittedBox(
-              fit: BoxFit.contain,
-              child: RepaintBoundary(
-                key: _canvasKey,
-                child: BeforeAfterCanvas(
-                  beforeBytes: _beforeBytes,
-                  afterBytes: _afterBytes,
-                  sarpanchName:
-                      (widget.profile['sarpanchName'] as String?) ?? '',
-                  panchayatName:
-                      (widget.profile['panchayatName'] as String?) ?? '',
-                  sarpanchNameHindi:
-                      (widget.profile['sarpanchNameHindi'] as String?) ?? '',
-                  panchayatNameHindi:
-                      (widget.profile['panchayatNameHindi'] as String?) ?? '',
-                  profileImageUrl:
-                      (widget.profile['imageUrl'] as String?) ?? '',
-                  sealUrl: (widget.profile['sealUrl'] as String?) ?? '',
-                  notes: _notes.text,
-                  stacked: _stacked,
-                  frameStyle: _frameStyle,
-                  generatedArtworkUrl: _generatedArtworkUrl,
-                  localizedSarpanchName:
-                      (_localizedProfile['sarpanchName'] as String?) ?? '',
-                  localizedPanchayatName:
-                      (_localizedProfile['panchayatName'] as String?) ?? '',
-                  localizedDistrict:
-                      (_localizedProfile['district'] as String?) ?? '',
-                  localizedState: (_localizedProfile['state'] as String?) ?? '',
-                  contentLanguage: _contentLanguage,
+            OutlinedButton.icon(
+              onPressed: _saving ? null : _suggestFrame,
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Suggest frame with AI'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _saving ? null : () => _choose(true),
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              label: Text(_before == null
+                  ? 'Add BEFORE photo (optional)'
+                  : 'Change BEFORE photo'),
+            ),
+            if (_before != null)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => setState(() {
+                    _before = null;
+                    _beforeBytes = null;
+                  }),
+                  child: const Text('Remove before photo'),
+                ),
+              ),
+            OutlinedButton.icon(
+              onPressed: _saving ? null : () => _choose(false),
+              icon: const Icon(Icons.add_photo_alternate_outlined),
+              label: Text(_after == null
+                  ? 'Add AFTER photo (optional)'
+                  : 'Change AFTER photo'),
+            ),
+            if (_after != null)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => setState(() {
+                    _after = null;
+                    _afterBytes = null;
+                  }),
+                  child: const Text('Remove after photo'),
+                ),
+              ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Stack photos vertically'),
+              value: _stacked,
+              onChanged: (_before == null && _after == null)
+                  ? null
+                  : (value) => setState(() => _stacked = value),
+            ),
+            const SizedBox(height: 16),
+            Text('Preview', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            ClipRect(
+              child: FittedBox(
+                fit: BoxFit.contain,
+                child: RepaintBoundary(
+                  key: _canvasKey,
+                  child: BeforeAfterCanvas(
+                    beforeBytes: _beforeBytes,
+                    afterBytes: _afterBytes,
+                    sarpanchName:
+                        (widget.profile['sarpanchName'] as String?) ?? '',
+                    panchayatName:
+                        (widget.profile['panchayatName'] as String?) ?? '',
+                    sarpanchNameHindi:
+                        (widget.profile['sarpanchNameHindi'] as String?) ?? '',
+                    panchayatNameHindi:
+                        (widget.profile['panchayatNameHindi'] as String?) ?? '',
+                    profileImageUrl:
+                        (widget.profile['imageUrl'] as String?) ?? '',
+                    sealUrl: (widget.profile['sealUrl'] as String?) ?? '',
+                    notes: _notes.text,
+                    stacked: _stacked,
+                    frameStyle: _frameStyle,
+                    generatedArtworkUrl: _generatedArtworkUrl,
+                    localizedSarpanchName:
+                        (_localizedProfile['sarpanchName'] as String?) ?? '',
+                    localizedPanchayatName:
+                        (_localizedProfile['panchayatName'] as String?) ?? '',
+                    localizedDistrict:
+                        (_localizedProfile['district'] as String?) ?? '',
+                    localizedState:
+                        (_localizedProfile['state'] as String?) ?? '',
+                    contentLanguage: _contentLanguage,
+                  ),
                 ),
               ),
             ),
-          ),
           ],
           if (_error != null)
             Padding(
@@ -703,11 +716,17 @@ class _PostComposerScreenState extends State<PostComposerScreen> {
             ),
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: _saving ? null : (_uploadExistingPost ? _submitExistingPost : _submit),
-            icon: Icon(_uploadExistingPost ? Icons.upload_file_outlined : Icons.auto_awesome),
+            onPressed: _saving
+                ? null
+                : (_uploadExistingPost ? _submitExistingPost : _submit),
+            icon: Icon(_uploadExistingPost
+                ? Icons.upload_file_outlined
+                : Icons.auto_awesome),
             label: _saving
                 ? const Text('Preparing…')
-                : Text(_uploadExistingPost ? 'Upload post for caption approval' : 'Generate caption for approval'),
+                : Text(_uploadExistingPost
+                    ? 'Upload post for caption approval'
+                    : 'Generate caption for approval'),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(54),
             ),
