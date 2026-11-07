@@ -129,14 +129,16 @@ class _ApprovalCardState extends State<_ApprovalCard> {
         'Choose Instagram if it appears. Complete the post inside Instagram; some devices may require saving the image and creating the post there.',
       'threads' =>
         'Choose Threads if it appears. Review the image and caption and publish inside Threads.',
-      _ => 'Choose an installed app from the share sheet and finish sharing there.',
+      _ =>
+        'Choose an installed app from the share sheet and finish sharing there.',
     };
 
     final proceed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text('Share to $destinationName'),
-        content: Text('$guidance\n\nSarpanch Social Connect will not publish automatically to this destination.'),
+        content: Text(
+            '$guidance\n\nSarpanch Social Connect will not publish automatically to this destination.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
@@ -166,7 +168,8 @@ class _ApprovalCardState extends State<_ApprovalCard> {
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: const Text('Confirm sharing'),
-          content: Text('Did you finish publishing this update to $destinationName inside that app?'),
+          content: Text(
+              'Did you finish publishing this update to $destinationName inside that app?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext, false),
@@ -186,7 +189,8 @@ class _ApprovalCardState extends State<_ApprovalCard> {
         );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('$destinationName marked as manually shared.')),
+            SnackBar(
+                content: Text('$destinationName marked as manually shared.')),
           );
         }
       }
@@ -215,7 +219,8 @@ class _ApprovalCardState extends State<_ApprovalCard> {
           children: [
             const ListTile(
               title: Text('Choose a destination'),
-              subtitle: Text('Manual sharing opens your device share sheet. You must finish the post in the selected app.'),
+              subtitle: Text(
+                  'Manual sharing opens your device share sheet. You must finish the post in the selected app.'),
             ),
             ...destinations.map((item) => ListTile(
                   leading: Icon(item.$3),

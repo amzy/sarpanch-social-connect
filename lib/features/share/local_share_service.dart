@@ -29,7 +29,8 @@ class LocalShareService {
     }
     final result = await http.get(uri).timeout(const Duration(seconds: 30));
     if (result.statusCode != 200 || result.bodyBytes.isEmpty) {
-      throw Exception('Unable to download the final post image (HTTP ${result.statusCode}).');
+      throw Exception(
+          'Unable to download the final post image (HTTP ${result.statusCode}).');
     }
     if (result.bodyBytes.length > 8 * 1024 * 1024) {
       throw Exception('The post image exceeds the 8 MB sharing limit.');

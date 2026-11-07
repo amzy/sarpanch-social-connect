@@ -179,9 +179,8 @@ class BackendApiService {
   }) =>
       recordManualShare(
         postId: postId,
-        destination: destination == 'group'
-            ? 'whatsapp_group'
-            : 'whatsapp_channel',
+        destination:
+            destination == 'group' ? 'whatsapp_group' : 'whatsapp_channel',
       );
 
   Future<void> saveSocialCredentials(Map<String, String> credentials) async {
