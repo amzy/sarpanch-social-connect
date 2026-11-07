@@ -161,16 +161,28 @@ class BackendApiService {
   Future<Map<String, dynamic>> retryPost(String postId) =>
       _post('/api/posts/retry', {'postId': postId});
 
-  Future<void> recordWhatsAppDelivery({
+  Future<void> recordManualShare({
     required String postId,
     required String destination,
   }) async {
-    await _post('/api/posts/whatsapp-delivery', {
+    await _post('/api/posts/manual-share', {
       'postId': postId,
       'destination': destination,
       'confirmed': true,
     });
   }
+
+  @Deprecated('Use recordManualShare for all manual destinations.')
+  Future<void> recordWhatsAppDelivery({
+    required String postId,
+    required String destination,
+  }) =>
+      recordManualShare(
+        postId: postId,
+        destination: destination == 'group'
+            ? 'whatsapp_group'
+            : 'whatsapp_channel',
+      );
 
   Future<void> saveSocialCredentials(Map<String, String> credentials) async {
     await _post('/api/social/credentials', credentials);
