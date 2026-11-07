@@ -662,6 +662,29 @@ async function handle(request: Request, env: Env): Promise<Response> {
       }
       return response(await publish(env, user.uid, postId), 200, origin);
     }
+    if (url.pathname === "/api/posts/manual-share") {
+      const postId = String(body.postId ?? "");
+      const destination = String(body.destination ?? "");
+      const confirmed = body.confirmed === true;
+      const destinations = ["facebook", "instagram", "threads", "whatsapp_group", "whatsapp_channel", "other"];
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(postId)) fail("A valid postId is required.");
+      if (!destinations.includes(destination)) fail("Choose a supported manual-share destination.");
+      if (!confirmed) fail("Manual sharing can only be recorded after explicit user confirmation.");
+      const path = `posts_queue/${postId}`;
+      const post = await getDoc(env, path);
+      if (post.data.uid !== user.uid) fail("Post not found.", 404);
+      const previous = (post.data.manualShareResults ?? {}) as Json;
+      const results = {
+        ...previous,
+        [destination]: {
+          status: "confirmed_by_user",
+          confirmedAt: { __timestamp: new Date().toISOString() },
+          confirmedBy: user.uid,
+        },
+      };
+      await patchDoc(env, path, { manualShareResults: results }, post.updateTime);
+      return response({ saved: true, destination, status: "confirmed_by_user" }, 200, origin);
+    }
     if (url.pathname === "/api/posts/whatsapp-delivery") {
       const postId = String(body.postId ?? "");
       const destination = String(body.destination ?? "");
