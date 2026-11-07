@@ -24,11 +24,12 @@ All endpoints except GET /health require Authorization: Bearer <Firebase ID toke
 | POST /api/profile/transliterate | Transliterate an Indian name into Devanagari |
 | POST /api/posts/approve-and-publish | Save edited caption, approve and publish |
 | POST /api/posts/reject | Reject an owned pending post |
+| POST /api/posts/manual-share | Record a user-confirmed manual share to a social destination |
 | POST /api/posts/retry | Retry AI generation or failed social publishing |
 | POST /api/social/credentials | Encrypt and store social tokens privately |
 | POST /api/admin/bootstrap | Allowlisted development-admin bootstrap |
 
-AI captions support English, Hindi, Marathi, Telugu, Tamil and Gujarati. Free users have three initial AI caption generations per India calendar month; the existing five-refresh limit remains separate. Publishing is explicitly user-initiated after approval. Facebook supports text/image, Instagram requires an image, and X currently publishes text.
+AI captions support English, Hindi, Marathi, Telugu, Tamil and Gujarati. Free users have three initial AI caption generations per India calendar month; the existing five-refresh limit remains separate. Direct publishing is explicitly user-initiated after approval. Facebook supports text/image, Instagram requires an image, and X currently publishes text. The approval queue also offers manual sharing to Facebook, Instagram, Threads, WhatsApp Groups, WhatsApp Channels and other installed apps through the native share sheet. Manual sharing is recorded only after the user confirms completing the post in the destination app; opening or dismissing the share sheet is never treated as successful delivery.
 
 ## One-time setup
 
@@ -86,7 +87,7 @@ Pass the same BACKEND_API_URL define to the GitHub Pages Flutter build and Andro
 
 ## Social credentials
 
-The Worker accepts Facebook Page token/Page ID, Instagram account ID and X bearer token. Access tokens are encrypted with AES-GCM using the Worker-only SOCIAL_ENCRYPTION_KEY and stored at users/{uid}/private/socialTokens. Flutter cannot read this document.
+The Worker accepts Facebook Page token/Page ID, Instagram account ID and X bearer token. Manual-share records are stored separately from API publishing results and do not claim that the Worker published the content. Access tokens are encrypted with AES-GCM using the Worker-only SOCIAL_ENCRYPTION_KEY and stored at users/{uid}/private/socialTokens. Flutter cannot read this document.
 
 Provider OAuth consent and token refresh are not yet implemented. Until then, credentials must be supplied through a trusted authenticated integration using the Worker endpoint. Never put provider tokens in Flutter or public profile documents.
 
