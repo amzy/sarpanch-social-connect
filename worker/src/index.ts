@@ -803,6 +803,80 @@ async function handle(request: Request, env: Env): Promise<Response> {
       }
       return response(await publish(env, user.uid, postId), 200, origin);
     }
+
+    if (url.pathname === "/api/posts/publish-selected") {
+      const postId = String(body.postId ?? "");
+      const caption = String(body.caption ?? "").trim();
+      const targets = Array.isArray(body.targets) ? body.targets as any[] : [];
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(postId) || !caption || !targets.length) fail("Post, caption and at least one destination are required.");
+      if (body.confirmed !== true) fail("Confirm publishing before sending this post.", 400);
+      const postPath = "posts_queue/" + postId;
+      const post = await getDoc(env, postPath);
+      if (post.data.uid !== user.uid) fail("Post not found.", 404);
+      if (post.data.status !== "pending_approval") fail("Post is not awaiting approval.", 409);
+      const owner = await getDoc(env, "users/" + user.uid);
+      if (String(owner.data.plan ?? "").toLowerCase() !== "premium" || String(owner.data.billingStatus ?? "").toLowerCase() !== "active") fail("Premium subscription is required for direct publishing. Manual sharing remains available.", 403);
+      const socialDoc = await getDoc(env, "users/" + user.uid + "/private/socialTokens").catch(() => null);
+      const accounts = (socialDoc?.data.accounts ?? []) as any[];
+      const imageUrl = String(post.data.finalCompositedImage ?? "");
+      const results: Json = {};
+      for (const target of targets) {
+        const provider = String(target.provider ?? "");
+        const id = String(target.id ?? "");
+        if (!["facebook", "instagram", "threads"].includes(provider)) fail("Unsupported publishing destination.");
+        const account = accounts.find((item: any) => item.provider === provider && String(item.id) === id);
+        if (!account || typeof account.token !== "string") fail("A selected social account is no longer connected. Refresh accounts and try again.", 409);
+        if (provider !== "facebook" && !imageUrl) {
+          results[id] = { ok: false, error: "This destination requires a post image." };
+          continue;
+        }
+        try {
+          const token = await decryptSecret(env, String(account.token));
+          if (provider === "facebook") {
+            const endpoint = imageUrl ? "photos" : "feed";
+            const payload = imageUrl ? { url: imageUrl, caption, access_token: token } : { message: caption, access_token: token };
+            const data = await oauthJson("https://graph.facebook.com/" + (env.META_GRAPH_VERSION || "v23.0") + "/" + encodeURIComponent(id) + "/" + endpoint, {
+              method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(payload),
+            });
+            results[id] = { ok: true, provider, name: String(account.name ?? "Facebook Page"), postId: String(data.post_id ?? data.id ?? "") };
+          } else if (provider === "instagram") {
+            const base = "https://graph.instagram.com/" + (env.META_GRAPH_VERSION || "v23.0") + "/" + encodeURIComponent(id);
+            const container = await oauthJson(base + "/media", {
+              method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({ image_url: imageUrl, caption, access_token: token }),
+            });
+            const published = await oauthJson(base + "/media_publish", {
+              method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({ creation_id: String(container.id), access_token: token }),
+            });
+            results[id] = { ok: true, provider, name: String(account.name ?? "Instagram"), postId: String(published.id ?? "") };
+          } else {
+            const base = "https://graph.threads.net/v1.0/" + encodeURIComponent(id);
+            const container = await oauthJson(base + "/threads", {
+              method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({ media_type: "IMAGE", image_url: imageUrl, text: caption, access_token: token }),
+            });
+            const published = await oauthJson(base + "/threads_publish", {
+              method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({ creation_id: String(container.id), access_token: token }),
+            });
+            results[id] = { ok: true, provider, name: String(account.name ?? "Threads"), postId: String(published.id ?? "") };
+          }
+        } catch (error) {
+          results[id] = { ok: false, provider, name: String(account.name ?? provider), error: String(error).slice(0, 350) };
+        }
+      }
+      const succeeded = Object.values(results).some((item: any) => item?.ok === true);
+      const failed = Object.values(results).some((item: any) => item?.ok === false);
+      const latest = await getDoc(env, postPath);
+      await patchDoc(env, postPath, {
+        aiCaption: caption,
+        status: succeeded ? (failed ? "partially_published" : "published") : "failed",
+        publishResults: results,
+        publishCompletedAt: { __timestamp: new Date().toISOString() },
+      }, latest.updateTime);
+      return response({ status: succeeded ? (failed ? "partially_published" : "published") : "failed", publishResults: results }, 200, origin);
+    }
     if (url.pathname === "/api/posts/manual-share") {
       const postId = String(body.postId ?? "");
       const destination = String(body.destination ?? "");
