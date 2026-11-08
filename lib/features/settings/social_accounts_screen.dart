@@ -18,9 +18,24 @@ class _SocialAccountsScreenState extends State<SocialAccountsScreen> {
   List<Map<String, dynamic>> _accounts = [];
 
   static const _providers = <(String, String, IconData, String)>[
-    ('facebook', 'Facebook Pages', Icons.facebook, 'Publish to Pages you manage'),
-    ('instagram', 'Instagram', Icons.camera_alt_outlined, 'Professional Creator or Business accounts'),
-    ('threads', 'Threads', Icons.alternate_email, 'Connect your Threads profile'),
+    (
+      'facebook',
+      'Facebook Pages',
+      Icons.facebook,
+      'Publish to Pages you manage'
+    ),
+    (
+      'instagram',
+      'Instagram',
+      Icons.camera_alt_outlined,
+      'Professional Creator or Business accounts'
+    ),
+    (
+      'threads',
+      'Threads',
+      Icons.alternate_email,
+      'Connect your Threads profile'
+    ),
   ];
 
   @override
@@ -32,7 +47,8 @@ class _SocialAccountsScreenState extends State<SocialAccountsScreen> {
     if (status == 'connected') {
       _message = '${provider ?? 'Social'} account connected successfully.';
     } else if (status == 'failed') {
-      _error = 'Account connection was not completed. Check provider permissions and try again.';
+      _error =
+          'Account connection was not completed. Check provider permissions and try again.';
     }
   }
 
@@ -40,10 +56,11 @@ class _SocialAccountsScreenState extends State<SocialAccountsScreen> {
     setState(() => _loading = true);
     try {
       final accounts = await BackendApiService().socialAccounts();
-      if (mounted) setState(() {
-        _accounts = accounts;
-        _error = null;
-      });
+      if (mounted)
+        setState(() {
+          _accounts = accounts;
+          _error = null;
+        });
     } catch (error) {
       if (mounted) setState(() => _error = error.toString());
     } finally {
@@ -64,7 +81,8 @@ class _SocialAccountsScreenState extends State<SocialAccountsScreen> {
         Uri.parse(authorizationUrl),
         mode: LaunchMode.externalApplication,
       );
-      if (!launched) throw StateError('Could not open the provider login page.');
+      if (!launched)
+        throw StateError('Could not open the provider login page.');
       if (mounted) {
         setState(() => _message =
             'Finish authorization in the browser. Return here after the provider redirects you back.');
@@ -99,9 +117,11 @@ class _SocialAccountsScreenState extends State<SocialAccountsScreen> {
           const SizedBox(height: 18),
           if (_loading) const LinearProgressIndicator(),
           ..._providers.map((provider) {
-            final connected = _accounts.where(
-              (account) => account['provider'] == provider.$1,
-            ).toList();
+            final connected = _accounts
+                .where(
+                  (account) => account['provider'] == provider.$1,
+                )
+                .toList();
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: Padding(
@@ -118,7 +138,8 @@ class _SocialAccountsScreenState extends State<SocialAccountsScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(provider.$2,
-                                  style: Theme.of(context).textTheme.titleMedium),
+                                  style:
+                                      Theme.of(context).textTheme.titleMedium),
                               Text(provider.$4,
                                   style: Theme.of(context).textTheme.bodySmall),
                             ],
@@ -138,7 +159,8 @@ class _SocialAccountsScreenState extends State<SocialAccountsScreen> {
                       ...connected.map((account) => ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.account_circle_outlined),
-                            title: Text(account['name']?.toString() ?? 'Account'),
+                            title:
+                                Text(account['name']?.toString() ?? 'Account'),
                             subtitle: Text('ID: ${account['id'] ?? ''}'),
                           )),
                     ],
@@ -152,9 +174,12 @@ class _SocialAccountsScreenState extends State<SocialAccountsScreen> {
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2))
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
                             : const Icon(Icons.link),
-                        label: Text(connected.isEmpty ? 'Connect account' : 'Connect another'),
+                        label: Text(connected.isEmpty
+                            ? 'Connect account'
+                            : 'Connect another'),
                       ),
                     ),
                   ],

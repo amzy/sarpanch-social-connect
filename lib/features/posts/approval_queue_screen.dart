@@ -208,26 +208,36 @@ class _ApprovalCardState extends State<_ApprovalCard> {
     }
   }
 
-
   Future<void> _publishSelected() async {
     final targets = _selectedAccountKeys.map((key) {
       final parts = key.split(':');
-      return <String, String>{'provider': parts.first, 'id': parts.sublist(1).join(':')};
+      return <String, String>{
+        'provider': parts.first,
+        'id': parts.sublist(1).join(':')
+      };
     }).toList();
     if (targets.isEmpty) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Publish selected post?'),
-        content: Text('Publish this approved post to ${targets.length} selected social account(s). This action sends the post to those accounts.'),
+        content: Text(
+            'Publish this approved post to ${targets.length} selected social account(s). This action sends the post to those accounts.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Publish now')),
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Publish now')),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
-    setState(() { _busy = true; _error = null; });
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
       final result = await BackendApiService().publishSelectedPost(
         postId: widget.post.id,
@@ -379,13 +389,15 @@ class _ApprovalCardState extends State<_ApprovalCard> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const LinearProgressIndicator();
                 }
-                final accounts = snapshot.data ?? const <Map<String, dynamic>>[];
+                final accounts =
+                    snapshot.data ?? const <Map<String, dynamic>>[];
                 if (accounts.isEmpty) {
                   return Card(
                     child: ListTile(
                       leading: const Icon(Icons.link_off),
                       title: const Text('No social accounts connected'),
-                      subtitle: const Text('Connect Facebook, Instagram or Threads to publish this post directly.'),
+                      subtitle: const Text(
+                          'Connect Facebook, Instagram or Threads to publish this post directly.'),
                       trailing: TextButton(
                         onPressed: _busy ? null : _openSocialAccounts,
                         child: const Text('Connect'),
@@ -401,10 +413,15 @@ class _ApprovalCardState extends State<_ApprovalCard> {
                       final key = '$provider:$id';
                       return CheckboxListTile(
                         value: _selectedAccountKeys.contains(key),
-                        onChanged: _busy ? null : (checked) => setState(() {
-                          if (checked == true) { _selectedAccountKeys.add(key); }
-                          else { _selectedAccountKeys.remove(key); }
-                        }),
+                        onChanged: _busy
+                            ? null
+                            : (checked) => setState(() {
+                                  if (checked == true) {
+                                    _selectedAccountKeys.add(key);
+                                  } else {
+                                    _selectedAccountKeys.remove(key);
+                                  }
+                                }),
                         secondary: Icon(provider == 'facebook'
                             ? Icons.facebook
                             : provider == 'instagram'
@@ -428,11 +445,14 @@ class _ApprovalCardState extends State<_ApprovalCard> {
               },
             ),
             FilledButton.icon(
-              onPressed: _busy || _selectedAccountKeys.isEmpty || _caption.text.trim().isEmpty
+              onPressed: _busy ||
+                      _selectedAccountKeys.isEmpty ||
+                      _caption.text.trim().isEmpty
                   ? null
                   : _publishSelected,
               icon: const Icon(Icons.publish),
-              label: Text('Publish to selected accounts (${_selectedAccountKeys.length})'),
+              label: Text(
+                  'Publish to selected accounts (${_selectedAccountKeys.length})'),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(

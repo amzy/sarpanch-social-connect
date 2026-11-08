@@ -198,7 +198,8 @@ class BackendApiService {
   Future<String> connectSocialAccount(String provider) async {
     final data = await _post('/api/social/connect', {'provider': provider});
     final url = data['authorizationUrl']?.toString() ?? '';
-    if (url.isEmpty) throw StateError('The provider did not return an authorization URL.');
+    if (url.isEmpty)
+      throw StateError('The provider did not return an authorization URL.');
     return url;
   }
 
