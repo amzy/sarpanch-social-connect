@@ -161,6 +161,18 @@ class BackendApiService {
   Future<Map<String, dynamic>> retryPost(String postId) =>
       _post('/api/posts/retry', {'postId': postId});
 
+  Future<Map<String, dynamic>> publishSelectedPost({
+    required String postId,
+    required String caption,
+    required List<Map<String, String>> targets,
+  }) =>
+      _post('/api/posts/publish-selected', {
+        'postId': postId,
+        'caption': caption,
+        'targets': targets,
+        'confirmed': true,
+      });
+
   Future<void> recordManualShare({
     required String postId,
     required String destination,
