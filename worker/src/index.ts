@@ -596,6 +596,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
   let stage = "authenticate_request";
   try {
     const user = await verifyUser(request, env);
+    const body = await request.json() as Json;
     if (url.pathname === "/api/social/connect") {
       const provider = String(body.provider ?? "") as SocialProvider;
       if (!["facebook", "instagram", "threads"].includes(provider)) fail("Choose Facebook, Instagram or Threads.");
@@ -621,7 +622,6 @@ async function handle(request: Request, env: Env): Promise<Response> {
       return response({ accounts }, 200, origin);
     }
     if (url.pathname === "/api/media/upload") {
-      const body = await request.json() as Json;
       const key = String(body.path ?? "");
       const contentType = String(body.contentType ?? "");
       const encoded = String(body.data ?? "");
@@ -636,7 +636,6 @@ async function handle(request: Request, env: Env): Promise<Response> {
       return response({ url: new URL("/media/" + key.split("/").map(encodeURIComponent).join("/"), request.url).toString(), size: binary.byteLength }, 201, origin);
     }
     stage = "parse_request_body";
-    const body = await request.json() as Json;
     if (url.pathname === "/api/posts/generate") {
       const postId = String(body.postId ?? "");
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(postId)) fail("A valid postId is required.");
