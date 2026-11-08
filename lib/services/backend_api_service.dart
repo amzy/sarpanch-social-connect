@@ -183,6 +183,21 @@ class BackendApiService {
             destination == 'group' ? 'whatsapp_group' : 'whatsapp_channel',
       );
 
+  Future<String> connectSocialAccount(String provider) async {
+    final data = await _post('/api/social/connect', {'provider': provider});
+    final url = data['authorizationUrl']?.toString() ?? '';
+    if (url.isEmpty) throw StateError('The provider did not return an authorization URL.');
+    return url;
+  }
+
+  Future<List<Map<String, dynamic>>> socialAccounts() async {
+    final data = await _post('/api/social/accounts', const {});
+    return (data['accounts'] as List? ?? const [])
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList();
+  }
+
   Future<void> saveSocialCredentials(Map<String, String> credentials) async {
     await _post('/api/social/credentials', credentials);
   }
