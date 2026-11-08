@@ -833,7 +833,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
           const token = await decryptSecret(env, String(account.token));
           if (provider === "facebook") {
             const endpoint = imageUrl ? "photos" : "feed";
-            const payload = imageUrl ? { url: imageUrl, caption, access_token: token } : { message: caption, access_token: token };
+            const payload: Record<string, string> = imageUrl ? { url: imageUrl, caption, access_token: token } : { message: caption, access_token: token };
             const data = await oauthJson("https://graph.facebook.com/" + (env.META_GRAPH_VERSION || "v23.0") + "/" + encodeURIComponent(id) + "/" + endpoint, {
               method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(payload),
             });
