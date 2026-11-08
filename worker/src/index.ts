@@ -463,7 +463,7 @@ function oauthConfig(env: Env, provider: SocialProvider): { clientId: string; cl
     clientId: env.META_APP_ID ?? "", clientSecret: env.META_APP_SECRET ?? "",
     authorize: "https://www.facebook.com/" + (env.META_GRAPH_VERSION || "v23.0") + "/dialog/oauth",
     token: "https://graph.facebook.com/" + (env.META_GRAPH_VERSION || "v23.0") + "/oauth/access_token",
-    scopes: "pages_show_list,pages_read_engagement,pages_manage_posts",
+    scopes: "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish",
   };
   if (provider === "instagram") return {
     clientId: env.INSTAGRAM_CLIENT_ID ?? "", clientSecret: env.INSTAGRAM_CLIENT_SECRET ?? "",
@@ -527,7 +527,7 @@ async function socialCallback(request: Request, env: Env): Promise<Response> {
         if (page.instagram_business_account?.id) accountRecords.push({
           id: String(page.instagram_business_account.id), provider: "instagram",
           name: String(page.instagram_business_account.username ?? "Instagram account"),
-          token: await encryptSecret(env, pageToken), pageId: String(page.id), connectedAt: new Date().toISOString(),
+          token: await encryptSecret(env, pageToken), authType: "facebook", pageId: String(page.id), connectedAt: new Date().toISOString(),
         });
       }
       if (!accountRecords.length) throw new Error("No Facebook Pages were authorized. Grant Page access and try again.");
@@ -541,7 +541,7 @@ async function socialCallback(request: Request, env: Env): Promise<Response> {
         grant_type: "ig_exchange_token", client_secret: config.clientSecret, access_token: tokenData.access_token,
       })).catch(() => tokenData);
       const profile = await oauthJson("https://graph.instagram.com/me?fields=user_id,username&access_token=" + encodeURIComponent(longData.access_token ?? tokenData.access_token));
-      accountRecords.push({ id: String(profile.user_id ?? profile.id), provider, name: String(profile.username ?? "Instagram"), token: await encryptSecret(env, String(longData.access_token ?? tokenData.access_token)), connectedAt: new Date().toISOString() });
+      accountRecords.push({ id: String(profile.user_id ?? profile.id), provider, name: String(profile.username ?? "Instagram"), token: await encryptSecret(env, String(longData.access_token ?? tokenData.access_token)), authType: "instagram", connectedAt: new Date().toISOString() });
     } else {
       const tokenData = await oauthJson(config.token, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({
         client_id: config.clientId, client_secret: config.clientSecret, grant_type: "authorization_code", redirect_uri: redirectUri, code,
@@ -840,7 +840,8 @@ async function handle(request: Request, env: Env): Promise<Response> {
             });
             results[id] = { ok: true, provider, name: String(account.name ?? "Facebook Page"), postId: String(data.post_id ?? data.id ?? "") };
           } else if (provider === "instagram") {
-            const base = "https://graph.instagram.com/" + (env.META_GRAPH_VERSION || "v23.0") + "/" + encodeURIComponent(id);
+            const graphHost = account.authType === "facebook" ? "https://graph.facebook.com/" : "https://graph.instagram.com/";
+            const base = graphHost + (env.META_GRAPH_VERSION || "v23.0") + "/" + encodeURIComponent(id);
             const container = await oauthJson(base + "/media", {
               method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
               body: new URLSearchParams({ image_url: imageUrl, caption, access_token: token }),
