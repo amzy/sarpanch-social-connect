@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 
 import '../share/local_share_service.dart';
+import '../settings/social_accounts_screen.dart';
 import 'data/post_repository.dart';
 
 class ApprovalQueueScreen extends StatelessWidget {
@@ -53,10 +54,13 @@ class _ApprovalCardState extends State<_ApprovalCard> {
   bool _refreshing = false;
   int _selectedCaption = 0;
   String? _error;
+  late Future<List<Map<String, dynamic>>> _accountsFuture;
+  final Set<String> _selectedAccountKeys = {};
 
   @override
   void initState() {
     super.initState();
+    _accountsFuture = BackendApiService().socialAccounts();
     _caption = TextEditingController(
       text: (widget.post.data()['aiCaption'] as String?) ?? '',
     );
@@ -204,6 +208,66 @@ class _ApprovalCardState extends State<_ApprovalCard> {
     }
   }
 
+  Future<void> _publishSelected() async {
+    final targets = _selectedAccountKeys.map((key) {
+      final parts = key.split(':');
+      return <String, String>{
+        'provider': parts.first,
+        'id': parts.sublist(1).join(':')
+      };
+    }).toList();
+    if (targets.isEmpty) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Publish selected post?'),
+        content: Text(
+            'Publish this approved post to ${targets.length} selected social account(s). This action sends the post to those accounts.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Publish now')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final result = await BackendApiService().publishSelectedPost(
+        postId: widget.post.id,
+        caption: _caption.text.trim(),
+        targets: targets,
+      );
+      final status = result['status']?.toString() ?? 'unknown';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Publishing result: $status')),
+        );
+      }
+    } catch (error) {
+      if (mounted) setState(() => _error = 'Publishing failed: $error');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _openSocialAccounts() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SocialAccountsScreen()),
+    );
+    if (!mounted) return;
+    setState(() {
+      _accountsFuture = BackendApiService().socialAccounts();
+      _selectedAccountKeys.clear();
+    });
+  }
+
   Future<void> _chooseManualDestination() async {
     const destinations = <(String, String, IconData)>[
       ('facebook', 'Facebook', Icons.facebook),
@@ -315,30 +379,90 @@ class _ApprovalCardState extends State<_ApprovalCard> {
                 alignLabelWithHint: true,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            Text('Connected social accounts',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 6),
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: _accountsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const LinearProgressIndicator();
+                }
+                final accounts =
+                    snapshot.data ?? const <Map<String, dynamic>>[];
+                if (accounts.isEmpty) {
+                  return Card(
+                    child: ListTile(
+                      leading: const Icon(Icons.link_off),
+                      title: const Text('No social accounts connected'),
+                      subtitle: const Text(
+                          'Connect Facebook, Instagram or Threads to publish this post directly.'),
+                      trailing: TextButton(
+                        onPressed: _busy ? null : _openSocialAccounts,
+                        child: const Text('Connect'),
+                      ),
+                    ),
+                  );
+                }
+                return Column(
+                  children: [
+                    ...accounts.map((account) {
+                      final provider = account['provider']?.toString() ?? '';
+                      final id = account['id']?.toString() ?? '';
+                      final key = '$provider:$id';
+                      return CheckboxListTile(
+                        value: _selectedAccountKeys.contains(key),
+                        onChanged: _busy
+                            ? null
+                            : (checked) => setState(() {
+                                  if (checked == true) {
+                                    _selectedAccountKeys.add(key);
+                                  } else {
+                                    _selectedAccountKeys.remove(key);
+                                  }
+                                }),
+                        secondary: Icon(provider == 'facebook'
+                            ? Icons.facebook
+                            : provider == 'instagram'
+                                ? Icons.camera_alt_outlined
+                                : Icons.alternate_email),
+                        title: Text(account['name']?.toString() ?? provider),
+                        subtitle: Text(provider.toUpperCase()),
+                        controlAffinity: ListTileControlAffinity.trailing,
+                      );
+                    }),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: _busy ? null : _openSocialAccounts,
+                        icon: const Icon(Icons.manage_accounts_outlined),
+                        label: const Text('Manage accounts'),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+            FilledButton.icon(
+              onPressed: _busy ||
+                      _selectedAccountKeys.isEmpty ||
+                      _caption.text.trim().isEmpty
+                  ? null
+                  : _publishSelected,
+              icon: const Icon(Icons.publish),
+              label: Text(
+                  'Publish to selected accounts (${_selectedAccountKeys.length})'),
+            ),
+            const SizedBox(height: 8),
             OutlinedButton.icon(
               onPressed: _busy ? null : _chooseManualDestination,
               icon: const Icon(Icons.share_outlined),
-              label: const Text('Share manually to a platform'),
+              label: const Text('Share manually (WhatsApp and other apps)'),
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _busy ? null : () => _update('rejected'),
-                    child: Text(strings.reject),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed:
-                        _busy ? null : () => _update('approved_to_publish'),
-                    icon: const Icon(Icons.publish),
-                    label: Text(strings.approve),
-                  ),
-                ),
-              ],
+            OutlinedButton(
+              onPressed: _busy ? null : () => _update('rejected'),
+              child: Text(strings.reject),
             ),
             if (_busy)
               const Padding(

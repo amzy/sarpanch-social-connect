@@ -6,10 +6,17 @@ export interface Env {
   AI_MODEL?: string;
   SOCIAL_ENCRYPTION_KEY: string;
   META_GRAPH_VERSION?: string;
+  META_APP_ID?: string;
+  META_APP_SECRET?: string;
+  INSTAGRAM_CLIENT_ID?: string;
+  INSTAGRAM_CLIENT_SECRET?: string;
+  THREADS_APP_ID?: string;
+  THREADS_APP_SECRET?: string;
+  APP_RETURN_URL?: string;
   ADMIN_BOOTSTRAP_UID?: string;
   ALLOWED_ORIGINS?: string;
   MEDIA_BUCKET: {
-    put(key: string, value: ArrayBuffer, options?: { metadata?: { contentType: string } }): Promise<void>;
+    put(key: string, value: ArrayBuffer, options?: { metadata?: { contentType: string }; expirationTtl?: number }): Promise<void>;
     getWithMetadata(key: string, type: "arrayBuffer"): Promise<{ value: ArrayBuffer | null; metadata: { contentType?: string } | null }>;
   };
 }
@@ -449,6 +456,115 @@ async function publish(env: Env, uid: string, postId: string): Promise<Json> {
   }, latest.updateTime);
   return { status, publishResults: results };
 }
+
+type SocialProvider = "facebook" | "instagram" | "threads";
+function oauthConfig(env: Env, provider: SocialProvider): { clientId: string; clientSecret: string; authorize: string; token: string; scopes: string } {
+  if (provider === "facebook") return {
+    clientId: env.META_APP_ID ?? "", clientSecret: env.META_APP_SECRET ?? "",
+    authorize: "https://www.facebook.com/" + (env.META_GRAPH_VERSION || "v23.0") + "/dialog/oauth",
+    token: "https://graph.facebook.com/" + (env.META_GRAPH_VERSION || "v23.0") + "/oauth/access_token",
+    scopes: "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish",
+  };
+  if (provider === "instagram") return {
+    clientId: env.INSTAGRAM_CLIENT_ID ?? "", clientSecret: env.INSTAGRAM_CLIENT_SECRET ?? "",
+    authorize: "https://www.instagram.com/oauth/authorize",
+    token: "https://api.instagram.com/oauth/access_token",
+    scopes: "instagram_business_basic,instagram_business_content_publish",
+  };
+  return {
+    clientId: env.THREADS_APP_ID ?? "", clientSecret: env.THREADS_APP_SECRET ?? "",
+    authorize: "https://threads.net/oauth/authorize",
+    token: "https://graph.threads.net/oauth/access_token",
+    scopes: "threads_basic,threads_content_publish",
+  };
+}
+function oauthRedirect(request: Request): string {
+  return new URL("/api/social/oauth/callback", request.url).toString();
+}
+async function oauthJson(url: string, init?: RequestInit): Promise<any> {
+  const result = await fetch(url, init);
+  const raw = await result.text();
+  let data: any;
+  try { data = JSON.parse(raw); } catch { throw new Error("Social provider returned an invalid response (HTTP " + result.status + ")."); }
+  if (!result.ok || data.error) throw new Error(data.error?.message ?? data.error_description ?? "Social account authorization failed.");
+  return data;
+}
+async function socialCallback(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const state = url.searchParams.get("state") ?? "";
+  const code = url.searchParams.get("code") ?? "";
+  const stateKey = "oauth-state/" + state;
+  const saved = state ? await env.MEDIA_BUCKET.getWithMetadata(stateKey, "arrayBuffer") : null;
+  const returnUrl = env.APP_RETURN_URL || "https://amzy.github.io/sarpanch-social-connect/";
+  const redirect = (status: string, provider: string) => Response.redirect(
+    returnUrl + (returnUrl.includes("?") ? "&" : "?") + "social_oauth=" + encodeURIComponent(status) + "&provider=" + encodeURIComponent(provider), 302);
+  if (!state || !saved?.value || !code) return redirect("failed", "unknown");
+  let context: any;
+  try { context = JSON.parse(new TextDecoder().decode(saved.value)); } catch { return redirect("failed", "unknown"); }
+  const provider = context.provider as SocialProvider;
+  if (!["facebook", "instagram", "threads"].includes(provider) || !context.uid || context.used) return redirect("failed", String(provider));
+  await env.MEDIA_BUCKET.put(stateKey, arrayBuffer(encoder.encode(JSON.stringify({ ...context, used: true }))), { expirationTtl: 600 });
+  try {
+    const config = oauthConfig(env, provider);
+    if (!config.clientId || !config.clientSecret) throw new Error("OAuth is not configured for this provider. Add its client ID and secret to Worker secrets.");
+    const redirectUri = oauthRedirect(request);
+    let accountRecords: Json[] = [];
+    if (provider === "facebook") {
+      const tokenData = await oauthJson(config.token + "?" + new URLSearchParams({
+        client_id: config.clientId, client_secret: config.clientSecret, redirect_uri: redirectUri, code,
+      }));
+      const longData = await oauthJson("https://graph.facebook.com/" + (env.META_GRAPH_VERSION || "v23.0") + "/oauth/access_token?" + new URLSearchParams({
+        grant_type: "fb_exchange_token", client_id: config.clientId, client_secret: config.clientSecret, fb_exchange_token: tokenData.access_token,
+      })).catch(() => tokenData);
+      const pages = await oauthJson("https://graph.facebook.com/" + (env.META_GRAPH_VERSION || "v23.0") + "/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&access_token=" + encodeURIComponent(longData.access_token ?? tokenData.access_token));
+      for (const page of pages.data ?? []) {
+        const pageToken = String(page.access_token ?? "");
+        if (!page.id || !pageToken) continue;
+        accountRecords.push({
+          id: String(page.id), provider: "facebook", name: String(page.name ?? "Facebook Page"),
+          token: await encryptSecret(env, pageToken), connectedAt: new Date().toISOString(),
+        });
+        if (page.instagram_business_account?.id) accountRecords.push({
+          id: String(page.instagram_business_account.id), provider: "instagram",
+          name: String(page.instagram_business_account.username ?? "Instagram account"),
+          token: await encryptSecret(env, pageToken), authType: "facebook", pageId: String(page.id), connectedAt: new Date().toISOString(),
+        });
+      }
+      if (!accountRecords.length) throw new Error("No Facebook Pages were authorized. Grant Page access and try again.");
+    } else if (provider === "instagram") {
+      const form = new URLSearchParams({
+        client_id: config.clientId, client_secret: config.clientSecret, grant_type: "authorization_code",
+        redirect_uri: redirectUri, code,
+      });
+      const tokenData = await oauthJson(config.token, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: form });
+      const longData = await oauthJson("https://graph.instagram.com/access_token?" + new URLSearchParams({
+        grant_type: "ig_exchange_token", client_secret: config.clientSecret, access_token: tokenData.access_token,
+      })).catch(() => tokenData);
+      const profile = await oauthJson("https://graph.instagram.com/me?fields=user_id,username&access_token=" + encodeURIComponent(longData.access_token ?? tokenData.access_token));
+      accountRecords.push({ id: String(profile.user_id ?? profile.id), provider, name: String(profile.username ?? "Instagram"), token: await encryptSecret(env, String(longData.access_token ?? tokenData.access_token)), authType: "instagram", connectedAt: new Date().toISOString() });
+    } else {
+      const tokenData = await oauthJson(config.token, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({
+        client_id: config.clientId, client_secret: config.clientSecret, grant_type: "authorization_code", redirect_uri: redirectUri, code,
+      }) });
+      const longData = await oauthJson("https://graph.threads.net/access_token?" + new URLSearchParams({
+        grant_type: "th_exchange_token", client_secret: config.clientSecret, access_token: tokenData.access_token,
+      })).catch(() => tokenData);
+      const profile = await oauthJson("https://graph.threads.net/v1.0/me?fields=id,username&access_token=" + encodeURIComponent(longData.access_token ?? tokenData.access_token));
+      accountRecords.push({ id: String(profile.id), provider, name: String(profile.username ?? "Threads"), token: await encryptSecret(env, String(longData.access_token ?? tokenData.access_token)), connectedAt: new Date().toISOString() });
+    }
+    const path = "users/" + context.uid + "/private/socialTokens";
+    const old = await getDoc(env, path).catch(() => null);
+    const existing = (old?.data.accounts ?? []) as Json[];
+    const merged = [...existing.filter((entry: any) => !accountRecords.some((next: any) => next.provider === entry.provider && next.id === entry.id)), ...accountRecords];
+    const fields: Json = { accounts: merged, updatedAt: { __timestamp: new Date().toISOString() } };
+    if (old) await patchDoc(env, path, fields, old.updateTime); else await createDoc(env, path, fields);
+    return redirect("connected", provider);
+  } catch (error) {
+    console.error(JSON.stringify({ event: "social_oauth_callback_failed", provider, uid: context.uid, message: String(error).slice(0, 240) }));
+    return redirect("failed", provider);
+  }
+}
+
 async function handle(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const requestOrigin = request.headers.get("origin");
@@ -462,6 +578,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
     "access-control-allow-headers": "authorization, content-type", "access-control-max-age": "86400",
   }});
   if (url.pathname === "/health" && request.method === "GET") return response({ ok: true, service: "sarpanch-social-connect-api" }, 200, origin);
+  if (url.pathname === "/api/social/oauth/callback" && request.method === "GET") return socialCallback(request, env);
   if (url.pathname.startsWith("/media/") && request.method === "GET") {
     const key = decodeURIComponent(url.pathname.slice("/media/".length));
     if (!/^[A-Za-z0-9_-]{1,128}\/[A-Za-z0-9_-]{1,64}\/[A-Za-z0-9_.-]{1,160}$/.test(key)) return new Response("Not found", { status: 404 });
@@ -479,8 +596,32 @@ async function handle(request: Request, env: Env): Promise<Response> {
   let stage = "authenticate_request";
   try {
     const user = await verifyUser(request, env);
+    const body = await request.json() as Json;
+    if (url.pathname === "/api/social/connect") {
+      const provider = String(body.provider ?? "") as SocialProvider;
+      if (!["facebook", "instagram", "threads"].includes(provider)) fail("Choose Facebook, Instagram or Threads.");
+      const config = oauthConfig(env, provider);
+      if (!config.clientId || !config.clientSecret) fail("This provider is not configured yet. The app administrator must add its OAuth client ID and secret to Worker secrets.", 503);
+      const state = crypto.randomUUID() + crypto.randomUUID();
+      const redirectUri = oauthRedirect(request);
+      await env.MEDIA_BUCKET.put("oauth-state/" + state, arrayBuffer(encoder.encode(JSON.stringify({ uid: user.uid, provider, createdAt: Date.now(), used: false }))), { expirationTtl: 600 });
+      const authorize = new URL(config.authorize);
+      authorize.search = new URLSearchParams({
+        client_id: config.clientId, redirect_uri: redirectUri, response_type: "code",
+        scope: config.scopes, state,
+      }).toString();
+      if (provider === "instagram") authorize.searchParams.set("enable_fb_login", "false");
+      return response({ authorizationUrl: authorize.toString() }, 200, origin);
+    }
+    if (url.pathname === "/api/social/accounts") {
+      const doc = await getDoc(env, `users/${user.uid}/private/socialTokens`).catch(() => null);
+      const accounts = ((doc?.data.accounts ?? []) as any[]).map((entry: any) => ({
+        id: String(entry.id ?? ""), provider: String(entry.provider ?? ""),
+        name: String(entry.name ?? ""), connectedAt: String(entry.connectedAt ?? ""),
+      }));
+      return response({ accounts }, 200, origin);
+    }
     if (url.pathname === "/api/media/upload") {
-      const body = await request.json() as Json;
       const key = String(body.path ?? "");
       const contentType = String(body.contentType ?? "");
       const encoded = String(body.data ?? "");
@@ -495,7 +636,6 @@ async function handle(request: Request, env: Env): Promise<Response> {
       return response({ url: new URL("/media/" + key.split("/").map(encodeURIComponent).join("/"), request.url).toString(), size: binary.byteLength }, 201, origin);
     }
     stage = "parse_request_body";
-    const body = await request.json() as Json;
     if (url.pathname === "/api/posts/generate") {
       const postId = String(body.postId ?? "");
       if (!/^[A-Za-z0-9_-]{1,128}$/.test(postId)) fail("A valid postId is required.");
@@ -661,6 +801,81 @@ async function handle(request: Request, env: Env): Promise<Response> {
         return response({ ...result, requestId }, 200, origin);
       }
       return response(await publish(env, user.uid, postId), 200, origin);
+    }
+
+    if (url.pathname === "/api/posts/publish-selected") {
+      const postId = String(body.postId ?? "");
+      const caption = String(body.caption ?? "").trim();
+      const targets = Array.isArray(body.targets) ? body.targets as any[] : [];
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(postId) || !caption || !targets.length) fail("Post, caption and at least one destination are required.");
+      if (body.confirmed !== true) fail("Confirm publishing before sending this post.", 400);
+      const postPath = "posts_queue/" + postId;
+      const post = await getDoc(env, postPath);
+      if (post.data.uid !== user.uid) fail("Post not found.", 404);
+      if (post.data.status !== "pending_approval") fail("Post is not awaiting approval.", 409);
+      const owner = await getDoc(env, "users/" + user.uid);
+      if (String(owner.data.plan ?? "").toLowerCase() !== "premium" || String(owner.data.billingStatus ?? "").toLowerCase() !== "active") fail("Premium subscription is required for direct publishing. Manual sharing remains available.", 403);
+      const socialDoc = await getDoc(env, "users/" + user.uid + "/private/socialTokens").catch(() => null);
+      const accounts = (socialDoc?.data.accounts ?? []) as any[];
+      const imageUrl = String(post.data.finalCompositedImage ?? "");
+      const results: Json = {};
+      for (const target of targets) {
+        const provider = String(target.provider ?? "");
+        const id = String(target.id ?? "");
+        if (!["facebook", "instagram", "threads"].includes(provider)) fail("Unsupported publishing destination.");
+        const account = accounts.find((item: any) => item.provider === provider && String(item.id) === id);
+        if (!account || typeof account.token !== "string") fail("A selected social account is no longer connected. Refresh accounts and try again.", 409);
+        if (provider !== "facebook" && !imageUrl) {
+          results[id] = { ok: false, error: "This destination requires a post image." };
+          continue;
+        }
+        try {
+          const token = await decryptSecret(env, String(account.token));
+          if (provider === "facebook") {
+            const endpoint = imageUrl ? "photos" : "feed";
+            const payload: Record<string, string> = imageUrl ? { url: imageUrl, caption, access_token: token } : { message: caption, access_token: token };
+            const data = await oauthJson("https://graph.facebook.com/" + (env.META_GRAPH_VERSION || "v23.0") + "/" + encodeURIComponent(id) + "/" + endpoint, {
+              method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(payload),
+            });
+            results[id] = { ok: true, provider, name: String(account.name ?? "Facebook Page"), postId: String(data.post_id ?? data.id ?? "") };
+          } else if (provider === "instagram") {
+            const graphHost = account.authType === "facebook" ? "https://graph.facebook.com/" : "https://graph.instagram.com/";
+            const base = graphHost + (env.META_GRAPH_VERSION || "v23.0") + "/" + encodeURIComponent(id);
+            const container = await oauthJson(base + "/media", {
+              method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({ image_url: imageUrl, caption, access_token: token }),
+            });
+            const published = await oauthJson(base + "/media_publish", {
+              method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({ creation_id: String(container.id), access_token: token }),
+            });
+            results[id] = { ok: true, provider, name: String(account.name ?? "Instagram"), postId: String(published.id ?? "") };
+          } else {
+            const base = "https://graph.threads.net/v1.0/" + encodeURIComponent(id);
+            const container = await oauthJson(base + "/threads", {
+              method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({ media_type: "IMAGE", image_url: imageUrl, text: caption, access_token: token }),
+            });
+            const published = await oauthJson(base + "/threads_publish", {
+              method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({ creation_id: String(container.id), access_token: token }),
+            });
+            results[id] = { ok: true, provider, name: String(account.name ?? "Threads"), postId: String(published.id ?? "") };
+          }
+        } catch (error) {
+          results[id] = { ok: false, provider, name: String(account.name ?? provider), error: String(error).slice(0, 350) };
+        }
+      }
+      const succeeded = Object.values(results).some((item: any) => item?.ok === true);
+      const failed = Object.values(results).some((item: any) => item?.ok === false);
+      const latest = await getDoc(env, postPath);
+      await patchDoc(env, postPath, {
+        aiCaption: caption,
+        status: succeeded ? (failed ? "partially_published" : "published") : "failed",
+        publishResults: results,
+        publishCompletedAt: { __timestamp: new Date().toISOString() },
+      }, latest.updateTime);
+      return response({ status: succeeded ? (failed ? "partially_published" : "published") : "failed", publishResults: results }, 200, origin);
     }
     if (url.pathname === "/api/posts/manual-share") {
       const postId = String(body.postId ?? "");
