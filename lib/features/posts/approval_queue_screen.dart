@@ -440,24 +440,9 @@ class _ApprovalCardState extends State<_ApprovalCard> {
               icon: const Icon(Icons.share_outlined),
               label: const Text('Share manually (WhatsApp and other apps)'),
             ),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _busy ? null : () => _update('rejected'),
-                    child: Text(strings.reject),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed:
-                        _busy ? null : () => _update('approved_to_publish'),
-                    icon: const Icon(Icons.publish),
-                    label: Text(strings.approve),
-                  ),
-                ),
-              ],
+            OutlinedButton(
+              onPressed: _busy ? null : () => _update('rejected'),
+              child: Text(strings.reject),
             ),
             if (_busy)
               const Padding(
